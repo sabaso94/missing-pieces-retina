@@ -26,6 +26,16 @@ def test_gap_of_a_group_with_itself_is_zero():
     assert gap_ci(auroc, y, p, ids, everyone, everyone, n_boot=50) == (0.0, 0.0, 0.0)
 
 
+def test_mixture_batch_takes_an_exact_dose_of_the_group():
+    # share s on top of the natural share pi: the group makes up exactly s + (1 - s) * pi of the batch
+    in_group = np.zeros(1000, dtype=bool)
+    in_group[:200] = True  # pi = 0.2
+    rng = np.random.default_rng(0)
+    for share, n, expected in [(0.0, 100, 20), (0.5, 300, 180), (0.25, 400, 160), (1.0, 150, 150)]:
+        batch = mixture_batch(in_group, share=share, n=n, rng=rng)
+        assert len(np.unique(batch)) == n and in_group[batch].sum() == expected, (share, n)
+
+
 def test_mixture_batch_draws_without_replacement_and_enriches_the_group():
     rng = np.random.default_rng(0)
     in_group = np.zeros(1000, dtype=bool)
@@ -72,7 +82,8 @@ def test_mixture_null_false_alarms_near_alpha_with_paired_eyes():
 
 def test_mixture_skips_batches_larger_than_the_pool_can_hold():
     ids, z, p = _paired_eyes(n_patients=100)
-    in_g = ids < 40  # 40 patients -> 20 in every pool
-    rates = mixture_detection_rates(p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.5, 1.0], sizes=[20, 40],
-                                    n_reps=2, n_perm=10)
-    assert set(zip(rates["share"], rates["batch_size"])) == {(0.5, 20), (0.5, 40), (1.0, 20)}
+    in_g = ids < 40  # 40 patients -> 20 of the 50 images in every pool (pi = 0.4)
+    rates = mixture_detection_rates(p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.0, 0.5, 1.0],
+                                    sizes=[20, 40], n_reps=2, n_perm=10)
+    # share 0.5 needs 0.7 of the batch from the group: 14 of 20 fits, 28 of 40 does not
+    assert set(zip(rates["share"], rates["batch_size"])) == {(0.0, 20), (0.0, 40), (0.5, 20), (1.0, 20)}

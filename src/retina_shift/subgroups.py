@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from retina_shift.metrics import _cluster_resample_indices
-from retina_shift.shift import c2st_test, ks_test, median_bandwidth, mixture_batch, mmd_test
+from retina_shift.shift import c2st_test, group_count, ks_test, median_bandwidth, mixture_batch, mmd_test
 
 AGE_EDGES = [(None, 50, "<50"), (50, 65, "50-64"), (65, None, "65+")]
 
@@ -70,7 +70,8 @@ def mixture_detection_rates(p: np.ndarray, z: np.ndarray, ids: np.ndarray, group
     Every repetition draws a new reference and pool with `split_one_eye`: the two eyes of a patient look
     alike, and a single fixed split would make every batch share that split's chance difference, so neither
     gives the nominal false-alarm rate. Each group must be a union of strata, so that the pool always holds
-    the same number of its images; a batch that the pool cannot hold is skipped.
+    the same number of its images; a batch that the pool cannot hold is skipped. Batches take an exact dose
+    of the group (`mixture_batch`): share 0 is the natural mix, share 1 the group only.
     """
     rng = np.random.default_rng(seed)
     patient_strata = pd.Series(strata).groupby(ids).first()
@@ -83,7 +84,8 @@ def mixture_detection_rates(p: np.ndarray, z: np.ndarray, ids: np.ndarray, group
         n_pool, n_group = sum(pool_size.values()), sum(pool_size[s] for s in group_strata)
         for share in shares:
             for size in sizes:
-                if size > n_pool or round(share * size) > n_group:
+                k = group_count(share, n_group / n_pool, size)
+                if size > n_pool or k > n_group or size - k > n_pool - n_group:
                     continue
                 alarms = {"ks_outputs": 0, "mmd_features": 0, "c2st_features": 0}
                 for rep in range(n_reps):

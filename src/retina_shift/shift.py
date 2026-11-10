@@ -120,13 +120,16 @@ def detection_rates(ref_p: np.ndarray, ref_z: np.ndarray, pools: dict[str, tuple
     return pd.DataFrame(rows)
 
 
-def mixture_batch(in_group: np.ndarray, share: float, n: int, rng: np.random.Generator) -> np.ndarray:
-    """Indices of one batch of n images in which a subgroup is over-represented.
+def group_count(share: float, natural_share: float, n: int) -> int:
+    """Images from the group in a batch of n with `share` on top of the natural share: share 0 is the natural
+    mix, share 1 the group only, share 0.5 halfway between."""
+    return int(round((share + (1 - share) * natural_share) * n))
 
-    round(share * n) images come from the subgroup; the rest from the whole pool (which contains the
-    subgroup at its natural share), all without replacement. share = 0 is an unshifted batch.
-    """
-    n_group = int(round(share * n))
+
+def mixture_batch(in_group: np.ndarray, share: float, n: int, rng: np.random.Generator) -> np.ndarray:
+    """Indices of one batch of n images with an exact dose of a subgroup: group_count(share, pi, n) images
+    from the subgroup (pi = its share of the pool) and the rest from outside it, all without replacement."""
+    n_group = group_count(share, in_group.mean(), n)
     group = rng.choice(np.flatnonzero(in_group), size=n_group, replace=False)
-    left = np.setdiff1d(np.arange(len(in_group)), group)
-    return np.concatenate([group, rng.choice(left, size=n - n_group, replace=False)])
+    rest = rng.choice(np.flatnonzero(~in_group), size=n - n_group, replace=False)
+    return np.concatenate([group, rest])
