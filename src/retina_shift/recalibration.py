@@ -4,10 +4,12 @@ Two repairs, alone and together, against doing nothing and against a repair that
 - platt: logistic recalibration of the probabilities (intercept and slope on the logit), so that the
   probabilities match the clinic's referral rates; the threshold stays where it was set on EyePACS;
 - threshold: a new threshold, chosen on the labelled images to give 90% sensitivity again;
-- platt_threshold: both (Platt is monotone, so referrals are those of `threshold`; calibration is Platt's);
+- platt_threshold: both (referrals are those of `threshold`; calibration is Platt's);
 - em_prior: EM re-estimation of the prevalence from the clinic's unlabeled images, probabilities adjusted
-  to it, threshold unchanged (no labels at all).
-Every repair is scored on the clinic images that were not used to fit it.
+  to it (no labels at all). A prior shift is a monotone change of the probabilities, so at a matching
+  threshold it leaves referrals unchanged: it is scored on calibration only (sensitivity and specificity NaN).
+Every repair is scored on the clinic images that were not used to fit it. Platt scaling with a slope that is
+not positive (an inverted ranking, possible in small samples) falls back to the unrepaired model.
 """
 import numpy as np
 import pandas as pd
@@ -27,10 +29,13 @@ def _logit(p: np.ndarray) -> np.ndarray:
 
 
 def fit_platt(y: np.ndarray, p: np.ndarray) -> np.ndarray:
-    """(intercept, slope) of a logistic regression of y on logit(p); the identity (0, 1) if y has one class."""
+    """(intercept, slope) of a logistic regression of y on logit(p); the identity (0, 1) if y has one class.
+
+    The slope has a weak L2 penalty (sklearn's default, C = 1; the intercept is not penalised): small labelled
+    samples are often perfectly separated, and without a penalty the slope runs off to infinity."""
     if not 0 < y.sum() < len(y):
         return np.array([0.0, 1.0])
-    model = LogisticRegression(penalty=None).fit(_logit(p)[:, None], y)
+    model = LogisticRegression(C=1.0).fit(_logit(p)[:, None], y)
     return np.array([float(model.intercept_[0]), float(model.coef_[0, 0])])
 
 
@@ -47,24 +52,25 @@ def repair_once(y: np.ndarray, p: np.ndarray, t_source: float, fit_idx: np.ndarr
     one_class = not 0 < y_fit.sum() < len(y_fit)
 
     params = fit_platt(y_fit, p_fit)
-    p_platt = apply_platt(p_rest, params)
+    platt_fallback = one_class or params[1] <= 0
+    p_platt = p_rest if platt_fallback else apply_platt(p_rest, params)
     t_new = t_source if y_fit.sum() == 0 else threshold_for_sensitivity(y_fit, p_fit, TARGET_SENSITIVITY)
-    t_new_platt = t_source if y_fit.sum() == 0 else threshold_for_sensitivity(
-        y_fit, apply_platt(p_fit, params), TARGET_SENSITIVITY)
     _, p_em = prevalence_em(p, prior_train)  # unlabeled: uses every image of the clinic
 
+    # method: (scores for referral, threshold, probabilities for calibration, fallback)
     variants = {
-        "none": (p_rest, t_source, False),
-        "platt": (p_platt, t_source, one_class),
-        "threshold": (p_rest, t_new, y_fit.sum() == 0),
-        "platt_threshold": (p_platt, t_new_platt, one_class),
-        "em_prior": (p_em[rest], t_source, False),
+        "none": (p_rest, t_source, p_rest, False),
+        "platt": (p_platt, t_source, p_platt, platt_fallback),
+        "threshold": (p_rest, t_new, p_rest, y_fit.sum() == 0),
+        "platt_threshold": (p_rest, t_new, p_platt, platt_fallback),
+        "em_prior": (None, None, p_em[rest], False),
     }
     rows = []
-    for method, (scores, t, fallback) in variants.items():
-        rows.append({"method": method, "sens": sensitivity(y_rest, scores, t),
-                     "spec": specificity(y_rest, scores, t), "ece": ece(y_rest, scores),
-                     "fallback": bool(fallback), "n_scored": int(rest.sum())})
+    for method, (scores, t, probs, fallback) in variants.items():
+        rows.append({"method": method,
+                     "sens": np.nan if scores is None else sensitivity(y_rest, scores, t),
+                     "spec": np.nan if scores is None else specificity(y_rest, scores, t),
+                     "ece": ece(y_rest, probs), "fallback": bool(fallback), "n_scored": int(rest.sum())})
     return rows
 
 
