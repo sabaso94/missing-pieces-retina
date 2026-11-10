@@ -221,7 +221,7 @@ The data come from Kaggle and need a Kaggle API token (`KAGGLE_API_TOKEN`, or `~
 6. runs E1, E2, E3, E5 and E4;
 7. draws the figures.
 
-Models that already have checkpoints are loaded instead of retrained. Results are written to `results/` and figures to `figures/`. Training and prediction hold a site's images in memory (EyePACS: about 16 GB).
+Models that already have checkpoints are loaded instead of retrained. Results are written to `results/` and figures to `figures/`. Training and prediction hold a site's images in memory (EyePACS: about 16 GB). Seeds are fixed, and a full rerun from an empty `checkpoints/` (single GPU, PyTorch 2.0.0, CUDA 11.8) reproduced every CSV in `results/` and every figure exactly.
 
 ```
 src/retina_shift/   preprocessing, site readers, split, metrics, data loading, model, training, prediction,
