@@ -30,19 +30,19 @@ Koch et al. (2024) compared shift tests for a diabetic retinopathy model on shif
 |---|---|---|---|---|---|---|---|
 | EyePACS | USA | 35,126 | 17,563 | 19.6% | ICDR 0–4, one grade per image | `tanlikesmath/diabetic-retinopathy-resized` (Kaggle 2015 competition, resized) | not stated |
 | APTOS 2019 | India | 3,662 | not given | 40.6% | ICDR 0–4 | `mariaherrerot/aptos2019` (train, validation and test of the 2019 competition) | not stated |
-| Messidor-2 | France | 1,744 gradable | not given | 26.2% | ICDR 0–4, adjudicated (Krause et al., 2018) | `mariaherrerot/messidor2preprocess` and `google-brain/messidor2-dr-grades` | not stated; grades CC0 |
-| IDRiD | India | 516 | not given | 62.6% | ICDR 0–4 | `aaryapatel98/indian-diabetic-retinopathy-image-dataset` (grading set) | CC BY 4.0 |
-| ODIR-5K | China | 6,939 eyes | 3,475 | 17.2% | from free-text findings per eye (below) | `andrewmvd/ocular-disease-recognition-odir5k` | other |
+| Messidor-2 | France | 1,744 gradable | not given | 26.2% | ICDR 0–4, adjudicated (Krause et al., 2018); images from Decencière et al. (2014) and Abràmoff et al. (2013) | `mariaherrerot/messidor2preprocess` and `google-brain/messidor2-dr-grades` | not stated; grades CC0 |
+| IDRiD | India | 516 | not given | 62.6% | ICDR 0–4 | `aaryapatel98/indian-diabetic-retinopathy-image-dataset` (grading set; Porwal et al., 2018) | CC BY 4.0 |
+| ODIR-5K | China | 6,939 eyes | 3,475 | 17.2% | from free-text findings per eye (below) | `andrewmvd/ocular-disease-recognition-odir5k` (Li et al., 2021) | other |
 
 | | |
 |---|---|
-| Outcome | Referable diabetic retinopathy: ICDR grade 2 or worse (moderate non-proliferative or worse), the usual screening target |
+| Outcome | Referable diabetic retinopathy: ICDR grade 2 or worse (Wilkinson et al., 2003), moderate non-proliferative or worse, the usual screening target (Gulshan et al., 2016; Krause et al., 2018) |
 | Preprocessing | Every image is cropped to the fundus disc, padded to a square and resized to 384 × 384 px, the same way at every site. Colour is not normalised: it is part of what differs between cameras. |
 | ODIR labels | ODIR gives free-text findings per eye. Graded keywords (mild, moderate, severe non-proliferative, proliferative) map to ICDR grades; eyes with only other findings count as non-referable. 61 eyes with "diabetic retinopathy" without a grade, or only a suspected one, are excluded. |
 | EyePACS split | By patient: 24,590 training, 3,512 validation and 7,024 test images. The other four sites are used only for testing. |
-| Model | ResNet-50 (ImageNet weights), one output; AdamW, cosine schedule, at most 15 epochs with early stopping on validation AUROC; flips, rotations of up to 15° and ±10% brightness and contrast. Five seeds; the prediction is the mean of the five. Validation AUROC 0.946 (single models 0.931–0.937). |
+| Model | ResNet-50 (He et al., 2016; ImageNet weights), one output; AdamW, cosine schedule, at most 15 epochs with early stopping on validation AUROC; flips, rotations of up to 15° and ±10% brightness and contrast. Five seeds; the prediction is the mean of the five. Validation AUROC 0.946 (single models 0.931–0.937). |
 | Screening threshold | Set once on EyePACS validation for 90% sensitivity (probability 0.151; validation specificity 0.834) and used unchanged at every site |
-| Metrics | AUROC; sensitivity and specificity at the threshold; expected calibration error (ECE, 15 bins); calibration-in-the-large (CITL, mean prediction minus observed share; > 0 means the model over-predicts); calibration slope (< 1 means predictions are too extreme); Brier score |
+| Metrics | AUROC; sensitivity and specificity at the threshold; expected calibration error (ECE, 15 bins); calibration-in-the-large (Van Calster et al., 2019) (CITL, mean prediction minus observed share; > 0 means the model over-predicts); calibration slope (< 1 means predictions are too extreme); Brier score |
 
 ![One referable image from each site, after preprocessing](figures/sites.png)
 
@@ -97,7 +97,7 @@ Batches of 10 to 1,000 images are drawn without replacement, 200 times per size,
 
 Without labels, the model's outputs are all there is. Estimates of each site's prevalence, sensitivity, specificity and accuracy, from the outputs alone:
 
-- **Prevalence:** the share of images referred (classify and count); the same corrected for EyePACS validation sensitivity and specificity (adjusted count); and EM re-estimation of the prevalence (Saerens et al., 2002).
+- **Prevalence:** the share of images referred (classify and count); the same corrected for EyePACS validation sensitivity and specificity (adjusted count, Forman, 2008); and EM re-estimation of the prevalence (Saerens et al., 2002).
 - **Sensitivity and specificity:** the model's own expectation, treating each prediction as the true probability of referable disease, with and without the EM prevalence correction.
 - **Accuracy at the threshold:** the same expectation; ATC (Garg et al., 2022), the share of images above a confidence threshold fitted on EyePACS validation; and DoC (Guillory et al., 2021), validation accuracy shifted by the change in average confidence.
 
@@ -113,7 +113,7 @@ Without labels, the model's outputs are all there is. Estimates of each site's p
 
 - **Every estimate is too optimistic, at every new clinic.** Prevalence is overestimated by 0.16–0.19 on average (up to 0.27), specificity by 0.10 (up to 0.15, at IDRiD) and accuracy by about 0.06 for all three accuracy estimators. On EyePACS test the same estimates are close (adjusted count 0.186 against 0.192).
 - **The cause is the calibration shift of E1.** Each estimator trusts the model's probabilities, and at the new clinics those overstate disease, so the model believes many of its extra referrals are justified.
-- **The ranking of clinics is right.** For the plain estimates, the order of the four clinics matches the true order (Spearman 1.0 for prevalence, specificity and all three accuracy estimates). They can say which clinic is worse off, not by how much.
+- **The ordering of these four clinics is right.** For the plain estimates, it matches the true order (Spearman 1.0 for prevalence, specificity and all three accuracy estimates). With four clinics this is descriptive only: their prevalences are far apart, which makes ordering easy, and a perfect order would arise by chance once in 24 times.
 - **Correcting the prevalence with EM makes things worse.** Specificity after the EM correction is overestimated by 0.20 on average (0.37 at IDRiD), and its ranking of the clinics is wrong (Spearman 0.4). EM inherits the over-prediction: its prevalence estimates are as inflated as the others.
 
 The sensitivity estimates are close (mean error −0.02 without EM), but only because the true sensitivity is near 1 at every clinic.
@@ -123,7 +123,7 @@ The sensitivity estimates are close (mean error −0.02 without EM), but only be
 ODIR is the one site that records each patient's age and sex. Within it, two questions:
 
 - **Gaps:** is the model equally good for women and men, and across age bands (<50, 50–64, 65+)? Intervals resample patients.
-- **Group-mix shift:** if a clinic's patients become older, younger or more of one sex, do the shift tests notice? ODIR is compared with ODIR, so only the mix of patients changes. In every repetition, one eye per patient is taken at random and the patients are split in half within each sex and age band. One half is the reference; the batch is drawn from the other, with a share of 0, 25, 50 or 100% from one group and the rest from all patients. (Both eyes of a patient look alike, and a single fixed split makes every batch share that split's chance difference; either way, unshifted batches are flagged far more often than 5%.)
+- **Group-mix shift:** if a clinic's patients become older, younger or more of one sex, do the shift tests notice? ODIR is compared with ODIR, so only the mix of patients changes. Both eyes of a patient look alike, while the tests assume independent images, so in every repetition one eye per patient is taken at random and the patients are split afresh in half within each sex and age band. One half is the reference; the batch is drawn from the other. A batch has a dose of one group on top of its natural share: at dose 0 the group makes up its natural share of the batch, at dose 100% the whole batch, at 50% halfway between (for patients aged 65+, natural share 29%, that is 65%).
 
 | Group | Eyes | Referable | AUROC | Sensitivity | Specificity | ECE |
 |---|---|---|---|---|---|---|
@@ -133,14 +133,14 @@ ODIR is the one site that records each patient's age and sex. Within it, two que
 | Age 50–64 | 3,440 | 18.1% | 0.938 [0.926, 0.950] | 0.944 [0.924, 0.961] | 0.678 [0.660, 0.698] | 0.098 |
 | Age 65+ | 2,025 | 13.5% | 0.907 [0.883, 0.930] | 0.912 [0.875, 0.945] | 0.635 [0.609, 0.661] | 0.120 |
 
-With no change (share 0%), 2.0–8.0% of batches are flagged, for every test, group and batch size from 30 to 1,000. Share of batches flagged when the batch is made only of one group (share 100%):
+With no change (dose 0), 0–9% of batches are flagged, for every test, group and batch size from 30 to 1,000. Share of batches flagged when the batch is made only of one group (dose 100%):
 
 | Batch | Test | 30 images | 100 | 300 | 600 |
 |---|---|---|---|---|---|
-| Only age 65+ | outputs / kernel / classifier | 0.04 / 0.23 / 0.06 | 0.04 / 0.81 / 0.21 | 0.08 / 1.00 / 0.72 | – |
-| Only age <50 | outputs / kernel / classifier | 0.10 / 0.12 / 0.06 | 0.07 / 0.45 / 0.19 | 0.08 / 0.99 / 0.67 | – |
-| Only women | outputs / kernel / classifier | 0.05 / 0.05 / 0.05 | 0.02 / 0.05 / 0.04 | 0.09 / 0.13 / 0.08 | 0.08 / 0.19 / 0.08 |
-| Only men | outputs / kernel / classifier | 0.07 / 0.06 / 0.02 | 0.07 / 0.04 / 0.03 | 0.08 / 0.10 / 0.07 | 0.08 / 0.07 / 0.08 |
+| Only age 65+ | outputs / kernel / classifier | 0.05 / 0.27 / 0.07 | 0.04 / 0.81 / 0.26 | 0.04 / 1.00 / 0.73 | – |
+| Only age <50 | outputs / kernel / classifier | 0.10 / 0.12 / 0.06 | 0.07 / 0.40 / 0.20 | 0.07 / 0.98 / 0.58 | – |
+| Only women | outputs / kernel / classifier | 0.03 / 0.04 / 0.04 | 0.02 / 0.05 / 0.04 | 0.09 / 0.12 / 0.08 | 0.07 / 0.19 / 0.07 |
+| Only men | outputs / kernel / classifier | 0.07 / 0.06 / 0.01 | 0.07 / 0.04 / 0.03 | 0.07 / 0.10 / 0.07 | 0.08 / 0.07 / 0.07 |
 
 The pool half holds about 507 eyes of patients aged 65+ and 370 of patients under 50, so batches of only those groups stop at 300.
 
@@ -148,52 +148,53 @@ The pool half holds about 507 eyes of patients aged 65+ and 370 of patients unde
 
 - **No gap by sex.** Every difference between women and men is small and its interval contains zero (AUROC −0.001 [−0.021, 0.018], sensitivity −0.004 [−0.033, 0.024], specificity −0.013 [−0.042, 0.014]).
 - **Patients aged 65+ are served worse.** Against 50–64, AUROC is lower by 0.031 [0.005, 0.056], specificity by 0.043 [0.010, 0.075], and calibration error is higher by 0.023 [0.006, 0.039]; sensitivity is lower by 0.032 [−0.007, 0.071]. Patients under 50 do as well as those aged 50–64.
-- **The older clinic is visible in the features, not in the outputs.** Batches of only patients aged 65+ are flagged by the kernel test in 81% of cases at 100 images and in every case at 300; the output test flags at most 8% at any size, so the predicted probabilities barely move although the model does worse on these patients. A half-and-half batch needs 300–600 images (kernel test 44–61%).
-- **A change in sex mix is almost invisible.** Batches made only of women are flagged in at most 19% of cases at 600 images, only of men in at most 10%. Here this matters little, since the model shows no sex gap.
-- As in E2, the classifier test needs more images than the kernel test (72% against 100% for 65+ at 300).
+- **The older clinic is visible in the features, not in the outputs.** Batches of only patients aged 65+ are flagged by the kernel test in 81% of cases at 100 images and in every case at 300; the output test flags at most 7% at any dose and size, so the predicted probabilities barely move although the model does worse on these patients. At a 50% dose (65% of the batch aged 65+), the kernel test flags 57% of batches of 300 and 87% of batches of 600.
+- **A change in sex mix is almost invisible.** Batches made only of women are flagged in at most 19% of cases at 600 images, only of men in at most 10%, as Koch et al. (2022) found for subgroup shifts in retinal images. Here this matters little, since the model shows no sex gap.
+- As in E2, the classifier test needs more images than the kernel test (73% against 100% for 65+ at 300).
 
 ### E5: repair with a few labelled images
 
 Grading a few hundred images at a new clinic is feasible. With *n* labelled images (25–400), drawn at random 200 times per *n*, each repair is fitted on them and scored on the clinic's other images:
 
-- **Recalibration:** Platt scaling, a logistic regression on the model's logit, so that probabilities match the clinic; the threshold stays where EyePACS put it.
+- **Recalibration:** Platt scaling (Platt, 1999), a logistic regression on the model's logit (with a weak penalty on the slope, since small samples are often perfectly separated), so that probabilities match the clinic; the threshold stays where EyePACS put it.
 - **New threshold:** the threshold that gives 90% sensitivity on the labelled images.
 - **Both:** recalibration and a new threshold (the referrals are those of the new threshold; the calibration is Platt's).
-- **EM prevalence, no labels:** probabilities adjusted to the prevalence estimated by EM on all of the clinic's images.
+- **EM prevalence, no labels:** probabilities adjusted to the prevalence estimated by EM on all of the clinic's images. This is a calibration repair: it changes every probability in the same order, so with a matching threshold the referrals stay those of no repair. It is judged on calibration only.
 
 Mean over the 200 draws, with the 2.5–97.5% range across draws:
 
 | Site | Repair | Labelled | Sensitivity | Specificity | ECE |
 |---|---|---|---|---|---|
 | APTOS | none | – | 1.000 | 0.758 | 0.114 |
-| | recalibration + new threshold | 100 | 0.884 [0.768, 0.964] | 0.906 [0.873, 0.939] | 0.052 [0.042, 0.097] |
+| | recalibration + new threshold | 100 | 0.884 [0.768, 0.964] | 0.906 [0.873, 0.939] | 0.052 [0.042, 0.092] |
 | | recalibration + new threshold | 400 | 0.896 [0.842, 0.941] | 0.903 [0.888, 0.919] | 0.046 [0.041, 0.054] |
-| | EM prevalence | 0 | 1.000 | 0.338 | 0.215 |
+| | EM prevalence | 0 | – | – | 0.215 |
 | Messidor-2 | none | – | 0.945 | 0.728 | 0.054 |
-| | recalibration + new threshold | 100 | 0.874 [0.731, 0.970] | 0.853 [0.643, 0.971] | 0.035 [0.016, 0.067] |
-| | recalibration + new threshold | 400 | 0.897 [0.824, 0.954] | 0.839 [0.744, 0.928] | 0.024 [0.016, 0.040] |
-| | EM prevalence | 0 | 0.976 | 0.552 | 0.142 |
+| | recalibration + new threshold | 100 | 0.874 [0.731, 0.970] | 0.853 [0.643, 0.971] | 0.034 [0.017, 0.066] |
+| | recalibration + new threshold | 400 | 0.897 [0.824, 0.954] | 0.839 [0.744, 0.928] | 0.025 [0.015, 0.039] |
+| | EM prevalence | 0 | – | – | 0.142 |
 | IDRiD | none | – | 0.988 | 0.570 | 0.083 |
-| | recalibration + new threshold | 100 | 0.892 [0.792, 0.958] | 0.911 [0.839, 0.987] | 0.050 [0.034, 0.073] |
-| | EM prevalence | 0 | 0.997 | 0.196 | 0.211 |
+| | recalibration + new threshold | 100 | 0.892 [0.792, 0.958] | 0.911 [0.839, 0.987] | 0.050 [0.034, 0.077] |
+| | EM prevalence | 0 | – | – | 0.211 |
 | ODIR | none | – | 0.938 | 0.667 | 0.101 |
-| | recalibration + new threshold | 100 | 0.871 [0.620, 0.982] | 0.765 [0.323, 0.977] | 0.031 [0.015, 0.061] |
+| | recalibration + new threshold | 100 | 0.871 [0.620, 0.982] | 0.765 [0.323, 0.977] | 0.030 [0.014, 0.060] |
 | | recalibration + new threshold | 400 | 0.897 [0.804, 0.957] | 0.770 [0.557, 0.914] | 0.021 [0.013, 0.036] |
-| | EM prevalence | 0 | 0.967 | 0.496 | 0.183 |
+| | EM prevalence | 0 | – | – | 0.183 |
 
 ![E5 sensitivity and calibration after repair](figures/e5_repair.png)
 
-- **A new threshold wins back the unnecessary referrals.** With 100 labelled images, specificity rises from 0.758 to 0.906 at APTOS and from 0.570 to 0.911 at IDRiD, while sensitivity returns to about the 90% the programme asked for (0.87–0.89 on average). At Messidor-2 and ODIR the gain is smaller (to 0.84–0.85 and 0.77).
+- **A new threshold wins back the unnecessary referrals.** With 100 labelled images, specificity rises from 0.758 to 0.906 at APTOS and from 0.570 to 0.911 at IDRiD, while sensitivity is 0.87–0.89 on average across the clinics. At Messidor-2 and ODIR the gain is smaller (to 0.84–0.85 and 0.77).
+- **About 200 labelled images restore the target sensitivity on average.** A threshold set for 90% sensitivity on the labelled images gives less on the clinic's other images, because it is fitted to the sample: mean sensitivity is 0.78–0.88 with 25 labels, 0.87–0.89 with 100, 0.89–0.90 with 200 and 0.90 with 400, at every clinic.
 - **How many labels depends on how many referable eyes they contain.** ODIR has 17% referable eyes, so 100 images hold about 17 of them, and the threshold rests on those: across draws, sensitivity ranges from 0.62 to 0.98 and specificity from 0.32 to 0.98. With 400 images the range narrows to 0.80–0.96 for sensitivity.
-- **Recalibration fixes the probabilities.** With 100 labels, ECE falls from 0.101 to 0.031 at ODIR, from 0.114 to 0.052 at APTOS and from 0.054 to 0.035 at Messidor-2; with 400, to 0.021, 0.046 and 0.024.
-- **Recalibration alone moves the operating point.** Kept at the EyePACS threshold, the recalibrated probabilities refer fewer eyes: at ODIR sensitivity drops to 0.832 [0.721, 0.910] with 100 labels and 0.848 with 400, below the target. Recalibration and the referral threshold need to be set together.
-- **The repair without labels makes everything worse.** EM raises the estimated prevalence (E3), so every probability goes up: specificity falls to 0.20–0.55 and ECE rises to 0.14–0.22 at every clinic.
+- **Recalibration fixes the probabilities.** With 100 labels, ECE falls from 0.101 to 0.030 at ODIR, from 0.114 to 0.052 at APTOS and from 0.054 to 0.034 at Messidor-2; with 400, to 0.021, 0.046 and 0.025. ECE is biased upwards on few images: at IDRiD, 400 labels leave only 116 images to score, and even the unrepaired model's ECE reads 0.098 there against 0.082 with 25 labels.
+- **Recalibration alone moves the operating point.** Kept at the EyePACS threshold, the recalibrated probabilities refer fewer eyes: at ODIR sensitivity drops to 0.835 [0.733, 0.911] with 100 labels and 0.848 with 400, below the target. Recalibration and the referral threshold need to be set together.
+- **The repair without labels worsens calibration.** EM overestimates the prevalence (E3) and raises every probability to match: ECE rises from 0.05–0.11 to 0.14–0.22 at every clinic.
 
-A labelled sample without a single referable eye cannot fit either repair; this happened in 1 of 200 draws of 25 images at Messidor-2 and at ODIR, and never with 50 or more.
+A labelled sample without a single referable eye cannot fit either repair, and one that ranks the eyes backwards gives no usable recalibration; both fall back to no repair. This happened in 1 (Messidor-2) and 3 (ODIR) of 200 draws of 25 images, and never with 50 or more.
 
 ## Limitations
 
-- **Patients are not identified at three sites.** APTOS, Messidor-2 and IDRiD give no patient identifiers, so their intervals resample images, and both eyes of one person count as independent. Their intervals are somewhat too narrow.
+- **Patients are not identified at three sites.** The copies of APTOS, Messidor-2 and IDRiD used here give no patient identifiers, so their intervals resample images, and both eyes of one person count as independent. Their intervals are too narrow; Messidor-2, for one, consists of 874 examinations of two eyes each.
 - **The causes of shift are mixed.** Each new clinic differs in camera, population, prevalence and grading at once. The study measures their joint effect and cannot attribute it; E4 isolates one population shift inside a single site.
 - **Labels are made differently at each site.** Messidor-2 grades are adjudicated by retina specialists, EyePACS and APTOS have one grade per image, and ODIR's are derived from free-text findings. Part of each clinic's "shift" is a change in labelling.
 - **Kaggle copies.** All five datasets come from Kaggle copies, which may differ from the original releases (resizing, preprocessing, selected subsets).
@@ -220,7 +221,7 @@ The data come from Kaggle and need a Kaggle API token (`KAGGLE_API_TOKEN`, or `~
 6. runs E1, E2, E3, E5 and E4;
 7. draws the figures.
 
-Models that already have checkpoints are loaded instead of retrained. Results are written to `results/` and figures to `figures/`.
+Models that already have checkpoints are loaded instead of retrained. Results are written to `results/` and figures to `figures/`. Training and prediction hold a site's images in memory (EyePACS: about 16 GB).
 
 ```
 src/retina_shift/   preprocessing, site readers, split, metrics, data loading, model, training, prediction,

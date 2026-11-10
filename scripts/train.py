@@ -3,7 +3,7 @@
     python scripts/train.py --seeds 0 1 2 --device cuda
 
 One model per seed, saved to checkpoints/seed<k>.pt with its training history. Seeds whose checkpoint
-already exists are skipped, so the five members can be trained in parallel on two GPUs.
+already exists are skipped, so the five members can be trained in parallel on several GPUs.
 """
 import argparse
 

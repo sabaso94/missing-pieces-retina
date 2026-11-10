@@ -114,11 +114,12 @@ def e4_figure() -> None:
     mixture = pd.read_csv(RESULTS / "e4_mixture.csv")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.0))
     comparisons = list(dict.fromkeys(gaps["group"] + " vs " + gaps["reference"]))
-    for k, metric in enumerate(["sens", "auroc", "ece"]):
+    for k, metric in enumerate(["sens", "spec", "auroc", "ece"]):
         g = gaps[gaps["metric"] == metric]
-        y = np.arange(len(g)) + 0.2 * (k - 1)
+        y = np.arange(len(g)) + 0.18 * (k - 1.5)
         ax1.errorbar(g["gap"], y, xerr=[g["gap"] - g["lo"], g["hi"] - g["gap"]], fmt="o", capsize=3,
-                     label={"sens": "Sensitivity", "auroc": "AUROC", "ece": "ECE"}[metric])
+                     label={"sens": "Sensitivity", "spec": "Specificity", "auroc": "AUROC",
+                            "ece": "ECE (higher is worse)"}[metric])
     ax1.axvline(0, color="#999999", lw=0.8)
     ax1.set_yticks(np.arange(len(comparisons)), [c.replace("sex=", "").replace("age=", "age ") for c in comparisons])
     ax1.set(title="ODIR: gaps between groups (95% CI)", xlabel="Group minus reference")
@@ -151,6 +152,8 @@ def e5_figure() -> None:
             for method, (label, color) in methods.items():
                 if metric == "ece" and method == "platt":
                     continue  # same probabilities as recalibration + new threshold
+                if metric == "sens" and method == "em_prior":
+                    continue  # a calibration repair: referrals unchanged at a matching threshold
                 r = repair[(repair["site"] == site) & (repair["method"] == method)]
                 ax.plot(r["n"], r[metric], "o-", color=color, ms=3, label=label)
                 ax.fill_between(r["n"], r[f"{metric}_lo"], r[f"{metric}_hi"], color=color, alpha=0.12)
@@ -162,6 +165,7 @@ def e5_figure() -> None:
     axes[0, 0].set_ylabel("Sensitivity on the other images")
     axes[1, 0].set_ylabel("ECE on the other images")
     axes[0, 0].legend(fontsize=7, frameon=False)
+    axes[1, 3].legend(fontsize=7, frameon=False, loc="upper right", bbox_to_anchor=(1.0, 0.88))
     save(fig, "e5_repair.png")
 
 
