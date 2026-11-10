@@ -15,7 +15,6 @@ import torch
 from scipy.stats import binom, ks_2samp
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
 PCA_DIMS = 32
 
@@ -69,24 +68,28 @@ def mmd_test(ref_z: np.ndarray, batch_z: np.ndarray, bandwidth: float, n_perm: i
     return float((1 + (stats[1:] >= stats[0]).sum()) / (1 + n_perm))
 
 
-def c2st_test(ref_z: np.ndarray, batch_z: np.ndarray, seed: int = 0, folds: int = 5) -> float:
-    """Classifier two-sample test: can a classifier tell batch images from reference images?
+def c2st_test(ref_z: np.ndarray, batch_z: np.ndarray, seed: int = 0) -> float:
+    """Classifier two-sample test (Lopez-Paz & Oquab 2017): can a classifier tell batch images from
+    reference images?
 
-    An equal number of reference images is drawn, a logistic regression is fitted to tell the two apart,
-    and every image is classified by a model that did not see it (5-fold cross-validation). If the two
-    samples come from the same distribution, the number of correct calls is Binomial(2n, 1/2); the p-value
-    is the chance of at least as many correct calls.
+    An equal number of reference images is drawn; a random half of the 2n images fits a logistic
+    regression, which then classifies the other half. If the two samples come from the same distribution,
+    the number of correct calls on the held-out half is Binomial(n_held_out, 1/2); the p-value is the chance
+    of at least as many correct calls. (Cross-validated predictions are not independent enough for this
+    binomial test: on heavy-tailed features they raise too many false alarms.)
     """
     rng = np.random.default_rng(seed)
     n = len(batch_z)
     ref = ref_z[rng.choice(len(ref_z), size=n, replace=False)]
     x = np.concatenate([ref, batch_z])
     y = np.r_[np.zeros(n), np.ones(n)]
-    k = min(folds, n)
-    cv = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
-    predicted = cross_val_predict(LogisticRegression(max_iter=1000), x, y, cv=cv)
-    correct = int((predicted == y).sum())
-    return float(binom.sf(correct - 1, 2 * n, 0.5))
+    order = rng.permutation(2 * n)
+    fit, held_out = order[:n], order[n:]
+    if len(np.unique(y[fit])) < 2:
+        return 1.0
+    predicted = LogisticRegression(max_iter=1000).fit(x[fit], y[fit]).predict(x[held_out])
+    correct = int((predicted == y[held_out]).sum())
+    return float(binom.sf(correct - 1, len(held_out), 0.5))
 
 
 def detection_rates(ref_p: np.ndarray, ref_z: np.ndarray, pools: dict[str, tuple[np.ndarray, np.ndarray]],

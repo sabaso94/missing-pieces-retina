@@ -64,3 +64,14 @@ def test_pca_must_be_fitted_on_separate_training_features():
 
     assert rates(fit_pca(ref))["mmd_features"] >= 0.5
     assert (rates(fit_pca(train)) <= 0.15).all()
+
+
+def test_classifier_test_keeps_false_alarms_near_alpha_on_heavy_tailed_features():
+    # Network features are heavy-tailed; on such data, cross-validated predictions are not independent
+    # enough for a binomial test (false alarms ~0.09 at alpha 0.05). Pooled over five reference samples.
+    alarms = 0
+    for ref_seed in range(5):
+        rng = np.random.default_rng(ref_seed)
+        ref = rng.standard_t(2, size=(3500, 32))
+        alarms += sum(c2st_test(ref, rng.standard_t(2, size=(300, 32)), seed=rep) < 0.05 for rep in range(200))
+    assert alarms / 1000 <= 0.07
