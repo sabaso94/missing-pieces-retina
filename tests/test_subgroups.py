@@ -3,7 +3,7 @@ import pandas as pd
 
 from retina_shift.metrics import auroc
 from retina_shift.shift import mixture_batch
-from retina_shift.subgroups import age_band, assign_age_bands, gap_ci
+from retina_shift.subgroups import age_band, assign_age_bands, gap_ci, mixture_detection_rates, split_one_eye
 
 
 def test_age_band_edges():
@@ -34,3 +34,45 @@ def test_mixture_batch_draws_without_replacement_and_enriches_the_group():
     assert in_group[full].all() and len(np.unique(full)) == 150
     half = mixture_batch(in_group, share=0.5, n=300, rng=rng)
     assert len(np.unique(half)) == 300 and in_group[half].mean() >= 0.5
+
+
+def _paired_eyes(n_patients=600, seed=0):
+    """Two eyes per patient that look alike (a shared patient effect), as at ODIR."""
+    rng = np.random.default_rng(seed)
+    ids = np.repeat(np.arange(n_patients), 2)
+    z = rng.normal(size=(n_patients, 8))[ids] + 0.3 * rng.normal(size=(2 * n_patients, 8))
+    return ids, z, 1 / (1 + np.exp(-z[:, 0]))
+
+
+def test_split_one_eye_takes_one_eye_per_patient_and_halves_every_stratum():
+    ids, _, _ = _paired_eyes(n_patients=101)
+    strata = (ids % 3).astype(str)
+    ref, pool = split_one_eye(ids, strata, np.random.default_rng(0))
+    assert len(np.unique(ids[ref])) == len(ref) and len(np.unique(ids[pool])) == len(pool)
+    assert not set(ids[ref]) & set(ids[pool]) and len(ref) + len(pool) == 101
+    for s in np.unique(strata):
+        n = len(np.unique(ids[strata == s]))
+        assert (strata[ref] == s).sum() == n // 2 and (strata[pool] == s).sum() == n - n // 2
+
+
+def test_split_one_eye_changes_between_repetitions():
+    ids, _, _ = _paired_eyes(n_patients=100)
+    rng = np.random.default_rng(0)
+    first, second = split_one_eye(ids, np.zeros(len(ids), dtype=str), rng), split_one_eye(ids, np.zeros(len(ids), dtype=str), rng)
+    assert set(first[0]) != set(second[0])
+
+
+def test_mixture_null_false_alarms_near_alpha_with_paired_eyes():
+    ids, z, p = _paired_eyes()
+    in_g = ids % 2 == 0
+    rates = mixture_detection_rates(p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.0], sizes=[200],
+                                    n_reps=100, n_perm=50)
+    assert (rates["detection_rate"] <= 0.12).all(), rates
+
+
+def test_mixture_skips_batches_larger_than_the_pool_can_hold():
+    ids, z, p = _paired_eyes(n_patients=100)
+    in_g = ids < 40  # 40 patients -> 20 in every pool
+    rates = mixture_detection_rates(p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.5, 1.0], sizes=[20, 40],
+                                    n_reps=2, n_perm=10)
+    assert set(zip(rates["share"], rates["batch_size"])) == {(0.5, 20), (0.5, 40), (1.0, 20)}
