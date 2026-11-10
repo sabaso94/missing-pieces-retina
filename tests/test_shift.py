@@ -1,6 +1,6 @@
 import numpy as np
 
-from retina_shift.shift import c2st_test, detection_rates, fit_pca, ks_test, median_bandwidth, mmd_test
+from retina_shift.shift import c2st_test, detection_rates, fit_pca, ks_test, median_bandwidth, mmd_test, reduce
 
 REPS = 100
 
@@ -43,3 +43,24 @@ def test_detection_rates_skips_sizes_larger_than_the_pool():
     assert set(rates["batch_size"]) == {30}
     assert set(rates["detector"]) == {"ks_outputs", "mmd_features", "c2st_features"}
     assert rates["n_reps"].eq(5).all()
+
+
+def _noise(n, dims, rng):
+    return rng.normal(size=(n, dims))
+
+
+def test_pca_must_be_fitted_on_separate_training_features():
+    """PCA fitted on the reference overfits it: the reference then looks more spread out along the kept
+    directions than any new sample from the same distribution, and the feature tests raise false alarms.
+    Fitted on separate (training) features, false alarms stay near alpha."""
+    rng = np.random.default_rng(0)
+    train, ref, pool = _noise(2000, 256, rng), _noise(500, 256, rng), _noise(3000, 256, rng)
+    ref_p, pool_p = rng.random(500), rng.random(3000)
+
+    def rates(pca):
+        r = detection_rates(ref_p, reduce(pca, ref), {"same": (pool_p, reduce(pca, pool))}, sizes=[100],
+                            n_reps=40, n_perm=100)
+        return r.set_index("detector")["detection_rate"]
+
+    assert rates(fit_pca(ref))["mmd_features"] >= 0.5
+    assert (rates(fit_pca(train)) <= 0.15).all()

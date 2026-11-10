@@ -5,7 +5,8 @@ validation images) and returns a p-value; an alarm is p < alpha. Three tests, at
 
 - outputs: KS test on the predicted probabilities ("black-box shift detection", Rabanser et al., 2019);
 - features: kernel MMD test (Gretton et al., 2012) and a classifier two-sample test (C2ST, Lopez-Paz &
-  Oquab, 2017) on the network's image features, reduced to 32 dimensions by PCA fitted on the reference.
+  Oquab, 2017) on the network's image features, reduced to 32 dimensions by PCA fitted on EyePACS
+  training images.
   Classifier-based tests did best in Koch et al.'s retinal subgroup-shift studies.
 """
 import numpy as np
@@ -19,8 +20,18 @@ from sklearn.model_selection import StratifiedKFold, cross_val_predict
 PCA_DIMS = 32
 
 
-def fit_pca(ref_z: np.ndarray, dims: int = PCA_DIMS) -> PCA:
-    return PCA(n_components=dims, random_state=0).fit(ref_z)
+def fit_pca(train_z: np.ndarray, dims: int = PCA_DIMS) -> PCA:
+    """PCA for the feature tests, fitted on training-image features: never on the reference or a batch.
+
+    Fitted on the reference, PCA overfits it: the reference then spreads more along the kept directions than
+    any new sample from the same distribution, and the tests flag that difference as a shift.
+    """
+    return PCA(n_components=dims, random_state=0).fit(train_z)
+
+
+def reduce(pca: PCA, z: np.ndarray) -> np.ndarray:
+    """Features projected onto the PCA directions, as float64."""
+    return pca.transform(z).astype(np.float64)
 
 
 def ks_test(ref_p: np.ndarray, batch_p: np.ndarray) -> float:
