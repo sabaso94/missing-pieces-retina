@@ -11,6 +11,7 @@ Every repair is scored on the clinic images that were not used to fit it.
 """
 import numpy as np
 import pandas as pd
+from scipy.special import expit
 from sklearn.linear_model import LogisticRegression
 
 from retina_shift.labelfree import prevalence_em
@@ -34,7 +35,7 @@ def fit_platt(y: np.ndarray, p: np.ndarray) -> np.ndarray:
 
 
 def apply_platt(p: np.ndarray, params: np.ndarray) -> np.ndarray:
-    return 1 / (1 + np.exp(-(params[0] + params[1] * _logit(p))))
+    return expit(params[0] + params[1] * _logit(p))
 
 
 def repair_once(y: np.ndarray, p: np.ndarray, t_source: float, fit_idx: np.ndarray,
