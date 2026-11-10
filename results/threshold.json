@@ -1,0 +1,7 @@
+{
+  "threshold": 0.15057747587561607,
+  "target_sensitivity": 0.9,
+  "val_sensitivity": 0.901018922852984,
+  "val_specificity": 0.8336283185840708,
+  "val_auroc": 0.9459406680321006
+}
