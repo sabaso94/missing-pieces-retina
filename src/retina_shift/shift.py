@@ -104,3 +104,15 @@ def detection_rates(ref_p: np.ndarray, ref_z: np.ndarray, pools: dict[str, tuple
                 rows.append({"pool": name, "batch_size": size, "detector": detector,
                              "detection_rate": count / n_reps, "n_reps": n_reps})
     return pd.DataFrame(rows)
+
+
+def mixture_batch(in_group: np.ndarray, share: float, n: int, rng: np.random.Generator) -> np.ndarray:
+    """Indices of one batch of n images in which a subgroup is over-represented.
+
+    round(share * n) images come from the subgroup; the rest from the whole pool (which contains the
+    subgroup at its natural share), all without replacement. share = 0 is an unshifted batch.
+    """
+    n_group = int(round(share * n))
+    group = rng.choice(np.flatnonzero(in_group), size=n_group, replace=False)
+    left = np.setdiff1d(np.arange(len(in_group)), group)
+    return np.concatenate([group, rng.choice(left, size=n - n_group, replace=False)])

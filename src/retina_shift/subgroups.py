@@ -1,0 +1,72 @@
+"""Subgroups at ODIR (the one site that records age and sex): gaps between groups, and whether a change in
+the age or sex mix of a clinic's patients can be detected without labels."""
+from typing import Callable
+
+import numpy as np
+import pandas as pd
+
+from retina_shift.metrics import _cluster_resample_indices
+from retina_shift.shift import c2st_test, ks_test, median_bandwidth, mixture_batch, mmd_test
+
+AGE_EDGES = [(None, 50, "<50"), (50, 65, "50-64"), (65, None, "65+")]
+
+
+def age_band(age: float) -> str:
+    for lo, hi, name in AGE_EDGES:
+        if (lo is None or age >= lo) and (hi is None or age < hi):
+            return name
+    raise ValueError(age)
+
+
+def assign_age_bands(ages: pd.Series, referable: pd.Series, min_referable: int = 50) -> pd.Series:
+    """Age band per eye. A band with fewer than `min_referable` referable eyes gives sensitivities too
+    noisy to compare, so it is merged with the middle band ("<50" -> "<65", "65+" -> "50+")."""
+    bands = ages.map(age_band)
+    counts = referable.groupby(bands).sum()
+    if counts.get("<50", 0) < min_referable:
+        bands = bands.replace({"<50": "<65", "50-64": "<65"})
+    elif counts.get("65+", 0) < min_referable:
+        bands = bands.replace({"65+": "50+", "50-64": "50+"})
+    return bands
+
+
+def gap_ci(metric: Callable[[np.ndarray, np.ndarray], float], y: np.ndarray, p: np.ndarray, ids: np.ndarray,
+           in_group: np.ndarray, in_ref: np.ndarray, n_boot: int = 1000,
+           seed: int = 0) -> tuple[float, float, float]:
+    """metric(group) - metric(reference group), with a 95% CI from patient resamples of the whole site
+    (each resample is split into the two groups, so the groups keep their natural sizes on average)."""
+    rng = np.random.default_rng(seed)
+    point = metric(y[in_group], p[in_group]) - metric(y[in_ref], p[in_ref])
+    samples = []
+    for _ in range(n_boot):
+        idx = _cluster_resample_indices(ids, rng)
+        g, r = idx[in_group[idx]], idx[in_ref[idx]]
+        samples.append(metric(y[g], p[g]) - metric(y[r], p[r]))
+    lo, hi = np.nanpercentile(samples, [2.5, 97.5])
+    return float(point), float(lo), float(hi)
+
+
+def mixture_detection_rates(ref_p: np.ndarray, ref_z: np.ndarray, pool_p: np.ndarray, pool_z: np.ndarray,
+                            groups: dict[str, np.ndarray], shares: list[float], sizes: list[int],
+                            n_reps: int = 200, seed: int = 0, device: str = "cpu", alpha: float = 0.05,
+                            n_perm: int = 200) -> pd.DataFrame:
+    """Alarm rates of the three tests on batches enriched in one group (share 0 = false alarms)."""
+    rng = np.random.default_rng(seed)
+    bandwidth = median_bandwidth(ref_z)
+    rows = []
+    for group, in_group in groups.items():
+        for share in shares:
+            for size in sizes:
+                if size > len(pool_p) or round(share * size) > in_group.sum():
+                    continue
+                alarms = {"ks_outputs": 0, "mmd_features": 0, "c2st_features": 0}
+                for rep in range(n_reps):
+                    idx = mixture_batch(in_group, share, size, rng)
+                    alarms["ks_outputs"] += ks_test(ref_p, pool_p[idx]) < alpha
+                    alarms["mmd_features"] += mmd_test(ref_z, pool_z[idx], bandwidth, n_perm, seed + rep,
+                                                       device) < alpha
+                    alarms["c2st_features"] += c2st_test(ref_z, pool_z[idx], seed + rep) < alpha
+                for detector, count in alarms.items():
+                    rows.append({"group": group, "share": share, "batch_size": size, "detector": detector,
+                                 "detection_rate": count / n_reps, "n_reps": n_reps})
+    return pd.DataFrame(rows)
