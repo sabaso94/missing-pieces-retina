@@ -12,7 +12,7 @@ This repository studies that question with a referable diabetic retinopathy clas
 
 Confidence intervals are 95% intervals from a bootstrap with 1,000 resamples, resampling patients where the dataset identifies them (EyePACS, ODIR) and images otherwise. Differences between a clinic and EyePACS test resample both independently.
 
-This is the third study in a series with [missing-pieces-ecg](https://github.com/sabaso94/missing-pieces-ecg) (a deep ECG classifier on PTB-XL with missing leads, subgroups and shift) and [missing-pieces-wearable](https://github.com/sabaso94/missing-pieces-wearable) (mortality risk from a wrist wearable and clinical data when parts are missing).
+This is the third of four studies in a series with [missing-pieces-ecg](https://github.com/sabaso94/missing-pieces-ecg) (a deep ECG classifier with missing leads, subgroups and shift), [missing-pieces-wearable](https://github.com/sabaso94/missing-pieces-wearable) (mortality risk from a wrist wearable and clinical data when parts are missing, with a causal check of activity and mortality) and [missing-pieces-trajectory](https://github.com/sabaso94/missing-pieces-trajectory) (causal estimates and missing follow-up checked against a randomised trial).
 
 ## Motivation
 
