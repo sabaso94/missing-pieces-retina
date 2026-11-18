@@ -1,5 +1,7 @@
 # A diabetic retinopathy screening model at clinics it never saw
 
+[![tests](https://github.com/sabaso94/missing-pieces-retina/actions/workflows/tests.yml/badge.svg)](https://github.com/sabaso94/missing-pieces-retina/actions/workflows/tests.yml)
+
 When a retinal screening model trained at one clinic network is used somewhere else, what breaks, can it be noticed without labels, and how few labelled images does it take to repair?
 
 This repository studies that question with a referable diabetic retinopathy classifier trained on EyePACS (USA) and used, unchanged, on four public datasets from other clinics and countries: APTOS (India), Messidor-2 (France), IDRiD (India) and ODIR (China). It covers:
@@ -205,7 +207,7 @@ A labelled sample without a single referable eye cannot fit either repair, and o
 
 ```bash
 python -m venv .venv
-.venv/bin/pip install -U pip "setuptools>=64"
+.venv/bin/pip install -U pip "setuptools>=77"
 .venv/bin/pip install --extra-index-url https://download.pytorch.org/whl/cu118 -r requirements.txt
 .venv/bin/pip install -e .
 bash scripts/run_all.sh
@@ -254,3 +256,7 @@ figures/            the figures above
 - Platt, J. (1999). Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods. *Advances in Large Margin Classifiers*, 61–74.
 - Van Calster, B. et al. (2019). Calibration: the Achilles heel of predictive analytics. *BMC Medicine* 17, 230.
 - He, K., Zhang, X., Ren, S., Sun, J. (2016). Deep residual learning for image recognition. *CVPR*.
+
+## Licence
+
+The code is released under the [MIT licence](LICENSE). The data are not part of this repository; each dataset keeps its own licence and terms of use.
