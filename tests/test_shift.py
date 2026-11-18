@@ -58,8 +58,9 @@ def test_pca_must_be_fitted_on_separate_training_features():
     ref_p, pool_p = rng.random(500), rng.random(3000)
 
     def rates(pca):
-        r = detection_rates(ref_p, reduce(pca, ref), {"same": (pool_p, reduce(pca, pool))}, sizes=[100],
-                            n_reps=40, n_perm=100)
+        r = detection_rates(
+            ref_p, reduce(pca, ref), {"same": (pool_p, reduce(pca, pool))}, sizes=[100], n_reps=40, n_perm=100
+        )
         return r.set_index("detector")["detection_rate"]
 
     assert rates(fit_pca(ref))["mmd_features"] >= 0.5

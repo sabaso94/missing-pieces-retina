@@ -1,4 +1,5 @@
 """Running trained models over a set of images."""
+
 import numpy as np
 import torch
 
@@ -26,8 +27,7 @@ def predict_probs(model, x: torch.Tensor, device: str = "cuda", batch_size: int 
     return _forward(model, x, device, batch_size, with_features=False)
 
 
-def predict_site(models, x: torch.Tensor, device: str = "cuda",
-                 batch_size: int = 128) -> tuple[np.ndarray, np.ndarray]:
+def predict_site(models, x: torch.Tensor, device: str = "cuda", batch_size: int = 128) -> tuple[np.ndarray, np.ndarray]:
     """(N, n_models) probabilities, and the (N, 2048) features of the first model (seed 0)."""
     p0, z = _forward(models[0], x, device, batch_size, with_features=True)
     others = [predict_probs(m, x, device, batch_size) for m in models[1:]]

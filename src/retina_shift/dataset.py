@@ -4,6 +4,7 @@ A whole site fits in RAM as uint8 (EyePACS: 35,126 x 3 x 384 x 384 bytes = 15.5 
 once, in parallel, and batches are cut from one tensor. Augmentation runs on the GPU on whole batches, which
 keeps the data path out of the way of training.
 """
+
 from multiprocessing import Pool
 
 import numpy as np
@@ -39,8 +40,9 @@ def normalise(x: torch.Tensor) -> torch.Tensor:
     return (x - IMAGENET_MEAN.to(x.device)) / IMAGENET_STD.to(x.device)
 
 
-def gpu_augment(x: torch.Tensor, generator: torch.Generator, max_degrees: float = 15.0,
-                jitter: float = 0.1) -> torch.Tensor:
+def gpu_augment(
+    x: torch.Tensor, generator: torch.Generator, max_degrees: float = 15.0, jitter: float = 0.1
+) -> torch.Tensor:
     """Random flips, a rotation of up to +-15 degrees, and +-10% brightness and contrast, per image.
 
     Fundus photos have no fixed orientation between left and right eyes, so flips are safe; small rotations
@@ -58,8 +60,13 @@ def gpu_augment(x: torch.Tensor, generator: torch.Generator, max_degrees: float 
     cos, sin = torch.cos(angle), torch.sin(angle)
     sx = torch.where(flip_h, -1.0, 1.0)
     sy = torch.where(flip_v, -1.0, 1.0)
-    theta = torch.stack([torch.stack([cos * sx, -sin * sy, torch.zeros(n)], dim=1),
-                         torch.stack([sin * sx, cos * sy, torch.zeros(n)], dim=1)], dim=1).to(x.device)
+    theta = torch.stack(
+        [
+            torch.stack([cos * sx, -sin * sy, torch.zeros(n)], dim=1),
+            torch.stack([sin * sx, cos * sy, torch.zeros(n)], dim=1),
+        ],
+        dim=1,
+    ).to(x.device)
     grid = F.affine_grid(theta, list(x.shape), align_corners=False)
     x = F.grid_sample(x, grid, mode="bilinear", padding_mode="zeros", align_corners=False)
 

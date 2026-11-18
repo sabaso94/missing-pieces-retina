@@ -25,7 +25,7 @@ def _sample(prior: float, n: int, seed: int):
 
 
 def test_em_recovers_a_new_prevalence_and_counting_does_not():
-    y, p = _sample(0.5, 40_000, seed=1)
+    _y, p = _sample(0.5, 40_000, seed=1)
     prevalence, p_adjusted = prevalence_em(p, TRAIN_PRIOR)
     assert abs(prevalence - 0.5) < 0.03
     assert abs(p_adjusted.mean() - prevalence) < 1e-3
@@ -35,7 +35,7 @@ def test_em_recovers_a_new_prevalence_and_counting_does_not():
 def test_adjusted_count_recovers_the_prevalence():
     y_val, p_val = _sample(TRAIN_PRIOR, 40_000, seed=2)
     t = 0.3
-    y, p = _sample(0.5, 40_000, seed=3)
+    _y, p = _sample(0.5, 40_000, seed=3)
     estimate = prevalence_acc(p, t, sensitivity(y_val, p_val, t), specificity(y_val, p_val, t))
     assert abs(estimate - 0.5) < 0.03
     assert 0.0 <= prevalence_acc(np.zeros(10), t, 0.9, 0.8) <= 1.0  # clipped

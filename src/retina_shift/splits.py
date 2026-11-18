@@ -3,6 +3,7 @@
 EyePACS has both eyes of most patients. The eyes of one person look alike and usually share a grade, so a
 split by image would put near-copies of test images into training. Splitting by patient avoids that.
 """
+
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,7 @@ SPLITS_CSV = ROOT / "results" / "splits.csv"
 
 
 def patient_split(patient_ids: np.ndarray, seed: int = 0, fractions=(0.7, 0.1, 0.2)) -> np.ndarray:
-    """"train" / "val" / "test" for every row; all rows of a patient get the same split."""
+    """ "train" / "val" / "test" for every row; all rows of a patient get the same split."""
     patients = np.unique(patient_ids)
     shuffled = np.random.default_rng(seed).permutation(patients)
     cut = np.cumsum(fractions)[:-1] * len(patients)

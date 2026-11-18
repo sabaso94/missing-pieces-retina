@@ -11,6 +11,7 @@ Two repairs, alone and together, against doing nothing and against a repair that
 Every repair is scored on the clinic images that were not used to fit it. Platt scaling with a slope that is
 not positive (an inverted ranking, possible in small samples) falls back to the unrepaired model.
 """
+
 import numpy as np
 import pandas as pd
 from scipy.special import expit
@@ -43,8 +44,7 @@ def apply_platt(p: np.ndarray, params: np.ndarray) -> np.ndarray:
     return expit(params[0] + params[1] * _logit(p))
 
 
-def repair_once(y: np.ndarray, p: np.ndarray, t_source: float, fit_idx: np.ndarray,
-                prior_train: float) -> list[dict]:
+def repair_once(y: np.ndarray, p: np.ndarray, t_source: float, fit_idx: np.ndarray, prior_train: float) -> list[dict]:
     """Fit every repair on the labelled images fit_idx; score each on the remaining images."""
     rest = np.ones(len(y), dtype=bool)
     rest[fit_idx] = False
@@ -67,15 +67,28 @@ def repair_once(y: np.ndarray, p: np.ndarray, t_source: float, fit_idx: np.ndarr
     }
     rows = []
     for method, (scores, t, probs, fallback) in variants.items():
-        rows.append({"method": method,
-                     "sens": np.nan if scores is None else sensitivity(y_rest, scores, t),
-                     "spec": np.nan if scores is None else specificity(y_rest, scores, t),
-                     "ece": ece(y_rest, probs), "fallback": bool(fallback), "n_scored": int(rest.sum())})
+        rows.append(
+            {
+                "method": method,
+                "sens": np.nan if scores is None or t is None else sensitivity(y_rest, scores, t),
+                "spec": np.nan if scores is None or t is None else specificity(y_rest, scores, t),
+                "ece": ece(y_rest, probs),
+                "fallback": bool(fallback),
+                "n_scored": int(rest.sum()),
+            }
+        )
     return rows
 
 
-def repair_curve(y: np.ndarray, p: np.ndarray, t_source: float, sizes: list[int], prior_train: float,
-                 n_reps: int = 200, seed: int = 0) -> pd.DataFrame:
+def repair_curve(
+    y: np.ndarray,
+    p: np.ndarray,
+    t_source: float,
+    sizes: list[int],
+    prior_train: float,
+    n_reps: int = 200,
+    seed: int = 0,
+) -> pd.DataFrame:
     """repair_once over n_reps random labelled samples of each size (sizes not below the site size are
     skipped). One row per repeat, size and method."""
     rng = np.random.default_rng(seed)

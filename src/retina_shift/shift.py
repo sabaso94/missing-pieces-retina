@@ -9,6 +9,7 @@ validation images) and returns a p-value; an alarm is p < alpha. Three tests, at
   training images.
   Classifier-based tests did best in Koch et al.'s retinal subgroup-shift studies.
 """
+
 import numpy as np
 import pandas as pd
 import torch
@@ -47,8 +48,9 @@ def median_bandwidth(z: np.ndarray, max_n: int = 1000, seed: int = 0) -> float:
     return float(d[torch.triu_indices(len(z), len(z), offset=1).unbind()].median())
 
 
-def mmd_test(ref_z: np.ndarray, batch_z: np.ndarray, bandwidth: float, n_perm: int = 200, seed: int = 0,
-             device: str = "cpu") -> float:
+def mmd_test(
+    ref_z: np.ndarray, batch_z: np.ndarray, bandwidth: float, n_perm: int = 200, seed: int = 0, device: str = "cpu"
+) -> float:
     """Permutation p-value of the (biased) squared MMD with a Gaussian kernel.
 
     The kernel matrix is built once. A split of the pooled sample into "reference" and "batch" is a weight
@@ -57,7 +59,7 @@ def mmd_test(ref_z: np.ndarray, batch_z: np.ndarray, bandwidth: float, n_perm: i
     """
     z = torch.from_numpy(np.concatenate([ref_z, batch_z])).to(device, torch.float64)
     n_ref, n = len(ref_z), len(z)
-    kernel = torch.exp(-torch.cdist(z, z) ** 2 / (2 * bandwidth**2))
+    kernel = torch.exp(-(torch.cdist(z, z) ** 2) / (2 * bandwidth**2))
     generator = torch.Generator().manual_seed(seed)
     is_ref = torch.zeros(n_perm + 1, n, dtype=torch.bool)
     is_ref[0, :n_ref] = True  # row 0: the observed split
@@ -92,9 +94,17 @@ def c2st_test(ref_z: np.ndarray, batch_z: np.ndarray, seed: int = 0) -> float:
     return float(binom.sf(correct - 1, len(held_out), 0.5))
 
 
-def detection_rates(ref_p: np.ndarray, ref_z: np.ndarray, pools: dict[str, tuple[np.ndarray, np.ndarray]],
-                    sizes: list[int], n_reps: int = 200, seed: int = 0, device: str = "cpu",
-                    alpha: float = 0.05, n_perm: int = 200) -> pd.DataFrame:
+def detection_rates(
+    ref_p: np.ndarray,
+    ref_z: np.ndarray,
+    pools: dict[str, tuple[np.ndarray, np.ndarray]],
+    sizes: list[int],
+    n_reps: int = 200,
+    seed: int = 0,
+    device: str = "cpu",
+    alpha: float = 0.05,
+    n_perm: int = 200,
+) -> pd.DataFrame:
     """Share of batches drawn from each pool in which each test raises an alarm (p < alpha).
 
     `ref_z` and the pools' z must already be in the reduced (PCA) space. Batches are drawn without
@@ -115,15 +125,22 @@ def detection_rates(ref_p: np.ndarray, ref_z: np.ndarray, pools: dict[str, tuple
                 alarms["mmd_features"] += mmd_test(ref_z, pool_z[idx], bandwidth, n_perm, seed + rep, device) < alpha
                 alarms["c2st_features"] += c2st_test(ref_z, pool_z[idx], seed + rep) < alpha
             for detector, count in alarms.items():
-                rows.append({"pool": name, "batch_size": size, "detector": detector,
-                             "detection_rate": count / n_reps, "n_reps": n_reps})
+                rows.append(
+                    {
+                        "pool": name,
+                        "batch_size": size,
+                        "detector": detector,
+                        "detection_rate": count / n_reps,
+                        "n_reps": n_reps,
+                    }
+                )
     return pd.DataFrame(rows)
 
 
 def group_count(share: float, natural_share: float, n: int) -> int:
     """Images from the group in a batch of n with `share` on top of the natural share: share 0 is the natural
     mix, share 1 the group only, share 0.5 halfway between."""
-    return int(round((share + (1 - share) * natural_share) * n))
+    return round((share + (1 - share) * natural_share) * n)
 
 
 def mixture_batch(in_group: np.ndarray, share: float, n: int, rng: np.random.Generator) -> np.ndarray:

@@ -9,6 +9,7 @@ Two things change at a new clinic, and the estimators assume different things ab
   referable eyes changed, while images of a given grade look the same;
 - the model's confidence: average-confidence estimates assume the model is still calibrated there.
 """
+
 import numpy as np
 
 from retina_shift.metrics import bootstrap_ci, sensitivity, specificity
@@ -27,8 +28,7 @@ def prevalence_acc(p: np.ndarray, t: float, sens_val: float, spec_val: float) ->
     return float(np.clip(estimate, 0.0, 1.0))
 
 
-def prevalence_em(p: np.ndarray, prior_train: float, n_iter: int = 100,
-                  tol: float = 1e-6) -> tuple[float, np.ndarray]:
+def prevalence_em(p: np.ndarray, prior_train: float, n_iter: int = 100, tol: float = 1e-6) -> tuple[float, np.ndarray]:
     """EM re-estimation of the prevalence (Saerens et al., 2002), and the probabilities adjusted to it.
 
     Each round rescales every probability by the ratio of the current prevalence estimate to the training
@@ -86,11 +86,19 @@ def doc_accuracy(p: np.ndarray, y_val: np.ndarray, p_val: np.ndarray, t: float) 
     return decision_accuracy(y_val, p_val, t) - (_confidence(p_val, t).mean() - _confidence(p, t).mean())
 
 
-def estimate_site(y: np.ndarray, p: np.ndarray, ids: np.ndarray, y_val: np.ndarray, p_val: np.ndarray,
-                  t: float, prior_train: float, n_boot: int = 1000) -> dict[str, float]:
+def estimate_site(
+    y: np.ndarray,
+    p: np.ndarray,
+    ids: np.ndarray,
+    y_val: np.ndarray,
+    p_val: np.ndarray,
+    t: float,
+    prior_train: float,
+    n_boot: int = 1000,
+) -> dict[str, float]:
     """True prevalence, sensitivity, specificity and accuracy (with 95% CIs) next to every estimate.
     `y` is used only for the true values."""
-    row = {"n": len(y)}
+    row: dict[str, float] = {"n": len(y)}
     truths = {
         "prevalence": lambda yy, pp: float(yy.mean()),
         "sens": lambda yy, pp: sensitivity(yy, pp, t),

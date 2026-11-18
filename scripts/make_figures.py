@@ -1,7 +1,8 @@
 """All figures of the README, from the CSVs in results/ (and one cached image per site).
 
-    python scripts/make_figures.py
+python scripts/make_figures.py
 """
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -15,12 +16,19 @@ from retina_shift.splits import ROOT, load_meta
 RESULTS, FIGURES = ROOT / "results", ROOT / "figures"
 CACHE = ROOT / "data" / "cache"
 SITES = ["eyepacs_test", "aptos", "messidor2", "idrid", "odir"]
-LABELS = {"eyepacs_test": "EyePACS test (USA)", "aptos": "APTOS (India)", "messidor2": "Messidor-2 (France)",
-          "idrid": "IDRiD (India)", "odir": "ODIR (China)"}
-COLORS = {"eyepacs_test": "#4d4d4d", "aptos": "#e08214", "messidor2": "#2166ac", "idrid": "#b2182b",
-          "odir": "#1b7837"}
-DETECTORS = {"ks_outputs": "KS on outputs", "mmd_features": "MMD on features",
-             "c2st_features": "Classifier test on features"}
+LABELS = {
+    "eyepacs_test": "EyePACS test (USA)",
+    "aptos": "APTOS (India)",
+    "messidor2": "Messidor-2 (France)",
+    "idrid": "IDRiD (India)",
+    "odir": "ODIR (China)",
+}
+COLORS = {"eyepacs_test": "#4d4d4d", "aptos": "#e08214", "messidor2": "#2166ac", "idrid": "#b2182b", "odir": "#1b7837"}
+DETECTORS = {
+    "ks_outputs": "KS on outputs",
+    "mmd_features": "MMD on features",
+    "c2st_features": "Classifier test on features",
+}
 plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False})
 
 
@@ -58,15 +66,27 @@ def e1_figure() -> None:
     for name in SITES:
         b = bins[(bins["site"] == name) & (bins["n"] >= 10)]
         ax1.plot(b["mean_p"], b["frac_pos"], "o-", color=COLORS[name], ms=4, label=LABELS[name])
-    ax1.set(xlabel="Predicted probability of referable DR", ylabel="Observed share referable",
-            title="Calibration (bins with at least 10 images)", xlim=(0, 1), ylim=(0, 1))
+    ax1.set(
+        xlabel="Predicted probability of referable DR",
+        ylabel="Observed share referable",
+        title="Calibration (bins with at least 10 images)",
+        xlim=(0, 1),
+        ylim=(0, 1),
+    )
     ax1.legend(fontsize=8, frameon=False)
     x = np.arange(len(SITES))
     for offset, metric, marker in [(-0.12, "sens", "o"), (0.12, "spec", "s")]:
         values = sites.loc[SITES, metric]
         err = [values - sites.loc[SITES, f"{metric}_lo"], sites.loc[SITES, f"{metric}_hi"] - values]
-        ax2.errorbar(x + offset, values, yerr=err, fmt=marker, color="#333333" if metric == "sens" else "#999999",
-                     capsize=3, label="Sensitivity" if metric == "sens" else "Specificity")
+        ax2.errorbar(
+            x + offset,
+            values,
+            yerr=err,
+            fmt=marker,
+            color="#333333" if metric == "sens" else "#999999",
+            capsize=3,
+            label="Sensitivity" if metric == "sens" else "Specificity",
+        )
     ax2.axhline(0.9, color="#333333", lw=0.8, ls=":")
     ax2.set_xticks(x, [LABELS[s].split(" (")[0] for s in SITES])
     ax2.set(ylabel="At the EyePACS threshold", title="Screening at a fixed threshold (95% CI)", ylim=(0, 1.02))
@@ -93,14 +113,35 @@ def e3_figure() -> None:
     est = pd.read_csv(RESULTS / "e3_estimates.csv").set_index("site").loc[SITES]
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.0))
     x = np.arange(len(SITES))
-    panels = [(ax1, "prevalence", [("prevalence_cc", "Share referred", "^"), ("prevalence_acc", "Adjusted count", "v"),
-                                   ("prevalence_em", "EM", "D")], "Prevalence of referable DR"),
-              (ax2, "spec", [("spec_ac", "Model's own expectation", "^"),
-                             ("spec_ac_em", "Same, after EM prevalence", "D")], "Specificity at the threshold")]
+    panels = [
+        (
+            ax1,
+            "prevalence",
+            [
+                ("prevalence_cc", "Share referred", "^"),
+                ("prevalence_acc", "Adjusted count", "v"),
+                ("prevalence_em", "EM", "D"),
+            ],
+            "Prevalence of referable DR",
+        ),
+        (
+            ax2,
+            "spec",
+            [("spec_ac", "Model's own expectation", "^"), ("spec_ac_em", "Same, after EM prevalence", "D")],
+            "Specificity at the threshold",
+        ),
+    ]
     for ax, truth, estimates, title in panels:
         values = est[f"true_{truth}"]
-        ax.errorbar(x, values, yerr=[values - est[f"true_{truth}_lo"], est[f"true_{truth}_hi"] - values], fmt="o",
-                    color="black", capsize=3, label="True (95% CI)")
+        ax.errorbar(
+            x,
+            values,
+            yerr=[values - est[f"true_{truth}_lo"], est[f"true_{truth}_hi"] - values],
+            fmt="o",
+            color="black",
+            capsize=3,
+            label="True (95% CI)",
+        )
         for k, (column, label, marker) in enumerate(estimates):
             ax.plot(x + 0.12 * (k + 1), est[column], marker, color=f"C{k}", label=label)
         ax.set_xticks(x, [LABELS[s].split(" (")[0] for s in SITES])
@@ -117,9 +158,16 @@ def e4_figure() -> None:
     for k, metric in enumerate(["sens", "spec", "auroc", "ece"]):
         g = gaps[gaps["metric"] == metric]
         y = np.arange(len(g)) + 0.18 * (k - 1.5)
-        ax1.errorbar(g["gap"], y, xerr=[g["gap"] - g["lo"], g["hi"] - g["gap"]], fmt="o", capsize=3,
-                     label={"sens": "Sensitivity", "spec": "Specificity", "auroc": "AUROC",
-                            "ece": "ECE (higher is worse)"}[metric])
+        ax1.errorbar(
+            g["gap"],
+            y,
+            xerr=[g["gap"] - g["lo"], g["hi"] - g["gap"]],
+            fmt="o",
+            capsize=3,
+            label={"sens": "Sensitivity", "spec": "Specificity", "auroc": "AUROC", "ece": "ECE (higher is worse)"}[
+                metric
+            ],
+        )
     ax1.axvline(0, color="#999999", lw=0.8)
     ax1.set_yticks(np.arange(len(comparisons)), [c.replace("sex=", "").replace("age=", "age ") for c in comparisons])
     ax1.set(title="ODIR: gaps between groups (95% CI)", xlabel="Group minus reference")
@@ -129,13 +177,23 @@ def e4_figure() -> None:
         label = group.replace("sex=", "").replace("age=", "age ")
         for detector, style in [("mmd_features", "o-"), ("ks_outputs", "o--")]:
             d = g[g["detector"] == detector]
-            ax2.plot(d["batch_size"], d["detection_rate"], style, color=f"C{k}", ms=4,
-                     label=f"{label}, {'features (kernel)' if detector == 'mmd_features' else 'outputs'}")
+            ax2.plot(
+                d["batch_size"],
+                d["detection_rate"],
+                style,
+                color=f"C{k}",
+                ms=4,
+                label=f"{label}, {'features (kernel)' if detector == 'mmd_features' else 'outputs'}",
+            )
     null = mixture[mixture["share"] == 0.0]
     ax2.plot(null.groupby("batch_size")["detection_rate"].mean(), "k:", lw=1, label="no change (false alarms)")
     log_axis(ax2, [30, 100, 300, 600, 1000])
-    ax2.set(title="Batches of one group only", xlabel="Unlabeled images in the batch",
-            ylabel="Share of batches flagged", ylim=(0, 1.02))
+    ax2.set(
+        title="Batches of one group only",
+        xlabel="Unlabeled images in the batch",
+        ylabel="Share of batches flagged",
+        ylim=(0, 1.02),
+    )
     ax2.legend(fontsize=7, frameon=False)
     save(fig, "e4_odir.png")
 
@@ -143,8 +201,12 @@ def e4_figure() -> None:
 def e5_figure() -> None:
     repair = pd.read_csv(RESULTS / "e5_repair.csv")
     sites = ["aptos", "messidor2", "idrid", "odir"]
-    methods = {"none": ("No repair", "#999999"), "em_prior": ("EM prevalence, no labels", "C2"),
-               "platt": ("Recalibration only", "C4"), "platt_threshold": ("Recalibration + new threshold", "C3")}
+    methods = {
+        "none": ("No repair", "#999999"),
+        "em_prior": ("EM prevalence, no labels", "C2"),
+        "platt": ("Recalibration only", "C4"),
+        "platt_threshold": ("Recalibration + new threshold", "C3"),
+    }
     fig, axes = plt.subplots(2, 4, figsize=(13, 6), sharex=True)
     for col, site in enumerate(sites):
         for row, metric in enumerate(["sens", "ece"]):

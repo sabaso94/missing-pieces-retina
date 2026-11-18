@@ -6,6 +6,7 @@ Writes results/preds/<site>.npz with image_id, split, p_seeds (one column per se
 and z (seed-0 features, 2048-d). EyePACS training images are included only for their features: the shift
 tests reduce features with a PCA fitted on them (never evaluated).
 """
+
 import argparse
 
 import numpy as np
@@ -36,8 +37,14 @@ def main() -> None:
     for site in SITES:
         meta = load_meta(site)
         p_seeds, z = predict_site(models, load_images(site, meta["image_id"]), device=args.device)
-        np.savez_compressed(PRED_DIR / f"{site}.npz", image_id=meta["image_id"].to_numpy(dtype=str),
-                            split=meta["split"].to_numpy(dtype=str), p_seeds=p_seeds, p=p_seeds.mean(axis=1), z=z)
+        np.savez_compressed(
+            PRED_DIR / f"{site}.npz",
+            image_id=meta["image_id"].to_numpy(dtype=str),
+            split=meta["split"].to_numpy(dtype=str),
+            p_seeds=p_seeds,
+            p=p_seeds.mean(axis=1),
+            z=z,
+        )
         print(f"{site}: {len(meta)} images predicted")
 
 

@@ -5,6 +5,7 @@ circular image of the retina. Cropping to the disc and resizing removes those di
 left between sites is the retina itself (and the camera's colour and sharpness), not the framing. No colour
 normalisation is applied: it would remove part of the real shift the study is about.
 """
+
 import numpy as np
 from PIL import Image
 
@@ -36,4 +37,4 @@ def crop_disc(img: Image.Image, threshold: int = 15) -> Image.Image:
 
 def prepare_image(img: Image.Image, size: int = IMAGE_SIZE) -> Image.Image:
     """RGB, cropped to the disc, resized to size x size."""
-    return crop_disc(img.convert("RGB")).resize((size, size), Image.LANCZOS)
+    return crop_disc(img.convert("RGB")).resize((size, size), Image.Resampling.LANCZOS)

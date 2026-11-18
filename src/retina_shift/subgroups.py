@@ -1,6 +1,7 @@
 """Subgroups at ODIR (the one site that records age and sex): gaps between groups, and whether a change in
 the age or sex mix of a clinic's patients can be detected without labels."""
-from typing import Callable
+
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -30,9 +31,16 @@ def assign_age_bands(ages: pd.Series, referable: pd.Series, min_referable: int =
     return bands
 
 
-def gap_ci(metric: Callable[[np.ndarray, np.ndarray], float], y: np.ndarray, p: np.ndarray, ids: np.ndarray,
-           in_group: np.ndarray, in_ref: np.ndarray, n_boot: int = 1000,
-           seed: int = 0) -> tuple[float, float, float]:
+def gap_ci(
+    metric: Callable[[np.ndarray, np.ndarray], float],
+    y: np.ndarray,
+    p: np.ndarray,
+    ids: np.ndarray,
+    in_group: np.ndarray,
+    in_ref: np.ndarray,
+    n_boot: int = 1000,
+    seed: int = 0,
+) -> tuple[float, float, float]:
     """metric(group) - metric(reference group), with a 95% CI from patient resamples of the whole site
     (each resample is split into the two groups, so the groups keep their natural sizes on average)."""
     rng = np.random.default_rng(seed)
@@ -56,14 +64,24 @@ def split_one_eye(ids: np.ndarray, strata: np.ndarray, rng: np.random.Generator)
     for stratum in np.unique(strata[eyes]):
         members = rng.permutation(eyes[strata[eyes] == stratum])
         ref.append(members[: len(members) // 2])
-        pool.append(members[len(members) // 2:])
+        pool.append(members[len(members) // 2 :])
     return np.concatenate(ref), np.concatenate(pool)
 
 
-def mixture_detection_rates(p: np.ndarray, z: np.ndarray, ids: np.ndarray, groups: dict[str, np.ndarray],
-                            strata: np.ndarray, shares: list[float], sizes: list[int], n_reps: int = 200,
-                            seed: int = 0, device: str = "cpu", alpha: float = 0.05,
-                            n_perm: int = 200) -> pd.DataFrame:
+def mixture_detection_rates(
+    p: np.ndarray,
+    z: np.ndarray,
+    ids: np.ndarray,
+    groups: dict[str, np.ndarray],
+    strata: np.ndarray,
+    shares: list[float],
+    sizes: list[int],
+    n_reps: int = 200,
+    seed: int = 0,
+    device: str = "cpu",
+    alpha: float = 0.05,
+    n_perm: int = 200,
+) -> pd.DataFrame:
     """Alarm rates of the three tests on batches enriched in one group, within one site (share 0 = false
     alarms). `z` must already be in the reduced (PCA) space.
 
@@ -92,10 +110,19 @@ def mixture_detection_rates(p: np.ndarray, z: np.ndarray, ids: np.ndarray, group
                     ref, pool = split_one_eye(ids, strata, rng)
                     batch = pool[mixture_batch(in_group[pool], share, size, rng)]
                     alarms["ks_outputs"] += ks_test(p[ref], p[batch]) < alpha
-                    alarms["mmd_features"] += mmd_test(z[ref], z[batch], median_bandwidth(z[ref]), n_perm,
-                                                       seed + rep, device) < alpha
+                    alarms["mmd_features"] += (
+                        mmd_test(z[ref], z[batch], median_bandwidth(z[ref]), n_perm, seed + rep, device) < alpha
+                    )
                     alarms["c2st_features"] += c2st_test(z[ref], z[batch], seed + rep) < alpha
                 for detector, count in alarms.items():
-                    rows.append({"group": group, "share": share, "batch_size": size, "detector": detector,
-                                 "detection_rate": count / n_reps, "n_reps": n_reps})
+                    rows.append(
+                        {
+                            "group": group,
+                            "share": share,
+                            "batch_size": size,
+                            "detector": detector,
+                            "detection_rate": count / n_reps,
+                            "n_reps": n_reps,
+                        }
+                    )
     return pd.DataFrame(rows)

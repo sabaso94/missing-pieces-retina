@@ -5,6 +5,7 @@
 Writes results/splits.csv (EyePACS image -> train / val / test), results/cohort.csv (one row per site and,
 for EyePACS, per split) and results/cohort_odir.csv (ODIR by sex and age band).
 """
+
 import pandas as pd
 
 from retina_shift.sites import SITES
@@ -28,8 +29,9 @@ def summary(name: str, meta: pd.DataFrame) -> dict:
 
 def main() -> None:
     eyepacs = pd.read_csv(META_DIR / "eyepacs.csv", dtype={"image_id": str, "patient_id": str})
-    pd.DataFrame({"image_id": eyepacs["image_id"], "split": patient_split(eyepacs["patient_id"].to_numpy())}) \
-        .to_csv(SPLITS_CSV, index=False)
+    pd.DataFrame({"image_id": eyepacs["image_id"], "split": patient_split(eyepacs["patient_id"].to_numpy())}).to_csv(
+        SPLITS_CSV, index=False
+    )
 
     rows = []
     for site in SITES:

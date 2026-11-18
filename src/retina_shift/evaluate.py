@@ -1,5 +1,6 @@
 """One site's performance table, and the ingredients every experiment script needs: predictions joined to
 the metadata, the screening threshold, and the training prevalence."""
+
 import json
 
 import numpy as np
@@ -46,8 +47,16 @@ def evaluate_site(y: np.ndarray, p: np.ndarray, ids: np.ndarray, t: float, n_boo
 def reliability_bins(y: np.ndarray, p: np.ndarray, n_bins: int = 10) -> pd.DataFrame:
     """Mean prediction and observed share of referable eyes in equal-width probability bins."""
     bins = np.digitize(p, np.linspace(0, 1, n_bins + 1)[1:-1])
-    rows = [{"bin": b, "mean_p": float(p[bins == b].mean()), "frac_pos": float(y[bins == b].mean()),
-             "n": int((bins == b).sum())} for b in range(n_bins) if (bins == b).any()]
+    rows = [
+        {
+            "bin": b,
+            "mean_p": float(p[bins == b].mean()),
+            "frac_pos": float(y[bins == b].mean()),
+            "n": int((bins == b).sum()),
+        }
+        for b in range(n_bins)
+        if (bins == b).any()
+    ]
     return pd.DataFrame(rows)
 
 

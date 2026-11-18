@@ -41,11 +41,13 @@ def test_eyepacs_patient_and_eye():
 
 
 def test_messidor_keeps_gradable_and_matches_case_insensitively():
-    grades = pd.DataFrame({
-        "image_id": ["a_PP.png", "IM001.jpg", "IM002.jpg"],
-        "adjudicated_dr_grade": [0.0, 2.0, np.nan],
-        "adjudicated_gradable": [1, 1, 0],
-    })
+    grades = pd.DataFrame(
+        {
+            "image_id": ["a_PP.png", "IM001.jpg", "IM002.jpg"],
+            "adjudicated_dr_grade": [0.0, 2.0, np.nan],
+            "adjudicated_gradable": [1, 1, 0],
+        }
+    )
     members = ["messidor-2/messidor-2/preprocess/a_PP.png", "messidor-2/messidor-2/preprocess/IM001.JPG"]
     rows = messidor_rows(grades, members)
     assert rows.image_id.tolist() == ["a_PP", "IM001"]
@@ -63,15 +65,17 @@ def test_idrid_ids_are_unique_across_train_and_test():
 
 
 def test_odir_one_row_per_eye_with_age_sex_and_exclusions():
-    table = pd.DataFrame({
-        "ID": [0, 1],
-        "Patient Age": [69, 57],
-        "Patient Sex": ["Female", "Male"],
-        "Left-Fundus": ["0_left.jpg", "1_left.jpg"],
-        "Right-Fundus": ["0_right.jpg", "1_right.jpg"],
-        "Left-Diagnostic Keywords": ["cataract", "suspected diabetic retinopathy"],
-        "Right-Diagnostic Keywords": ["normal fundus", "moderate non proliferative retinopathy"],
-    })
+    table = pd.DataFrame(
+        {
+            "ID": [0, 1],
+            "Patient Age": [69, 57],
+            "Patient Sex": ["Female", "Male"],
+            "Left-Fundus": ["0_left.jpg", "1_left.jpg"],
+            "Right-Fundus": ["0_right.jpg", "1_right.jpg"],
+            "Left-Diagnostic Keywords": ["cataract", "suspected diabetic retinopathy"],
+            "Right-Diagnostic Keywords": ["normal fundus", "moderate non proliferative retinopathy"],
+        }
+    )
     rows = odir_rows(table)
     assert rows.image_id.tolist() == ["0_left", "0_right", "1_right"]  # 1_left excluded (unspecified DR)
     assert rows.patient_id.tolist() == ["0", "0", "1"]
@@ -90,6 +94,9 @@ def test_aptos_combines_its_three_splits():
     }
     rows = aptos_rows(tables)
     assert rows.image_id.tolist() == ["a1", "b2", "c3"]
-    assert rows.member.tolist() == ["train_images/train_images/a1.png", "val_images/val_images/b2.png",
-                                    "test_images/test_images/c3.png"]
+    assert rows.member.tolist() == [
+        "train_images/train_images/a1.png",
+        "val_images/val_images/b2.png",
+        "test_images/test_images/c3.png",
+    ]
     assert rows.referable.tolist() == [1, 0, 1]

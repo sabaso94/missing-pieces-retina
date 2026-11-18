@@ -2,13 +2,15 @@
 
     python scripts/run_e2.py --device cuda
 
-Reference: EyePACS validation images; features reduced by a PCA fitted on EyePACS training images. Batches of 10-1000 images are drawn (without replacement) from
+Reference: EyePACS validation images; features reduced by a PCA fitted on EyePACS training images. Batches of 10-1000
+images are drawn (without replacement) from
 EyePACS test (false alarms) and from each clinic, 200 times per size; three tests per batch.
 Writes results/e2_detection.csv.
 """
+
 import argparse
 
-from retina_shift.evaluate import EXTERNAL, arrays, load_features, load_predictions
+from retina_shift.evaluate import EXTERNAL, load_features, load_predictions
 from retina_shift.shift import detection_rates, fit_pca, reduce
 from retina_shift.splits import ROOT
 

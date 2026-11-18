@@ -1,5 +1,6 @@
 """Training one ensemble member: AdamW, cosine learning rate, mixed precision, early stopping on validation
 AUROC. Seeded and with deterministic cuDNN, so a seed fixes the result."""
+
 import copy
 import os
 import random
@@ -38,8 +39,7 @@ def _seed_everything(seed: int) -> None:
     torch.backends.cudnn.benchmark = False
 
 
-def train_model(cfg: TrainConfig, x_train: torch.Tensor, y_train: np.ndarray, x_val: torch.Tensor,
-                y_val: np.ndarray):
+def train_model(cfg: TrainConfig, x_train: torch.Tensor, y_train: np.ndarray, x_val: torch.Tensor, y_val: np.ndarray):
     """Returns the model at the epoch with the best validation AUROC, and the per-epoch history."""
     _seed_everything(cfg.seed)
     generator = torch.Generator().manual_seed(cfg.seed)
@@ -77,5 +77,7 @@ def train_model(cfg: TrainConfig, x_train: torch.Tensor, y_train: np.ndarray, x_
             since_best += 1
             if since_best >= cfg.patience:
                 break
+    if best_state is None:
+        raise RuntimeError("the validation score never improved: no checkpoint to restore")
     model.load_state_dict(best_state)
     return model.eval(), pd.DataFrame(history)

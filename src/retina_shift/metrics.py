@@ -4,7 +4,8 @@ with bootstrap CIs that resample patients (or images, where a site has no patien
 All functions take y (N,) with 0/1 labels and p (N,) with predicted probabilities. A case is called
 positive when p >= t.
 """
-from typing import Callable
+
+from collections.abc import Callable
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -90,8 +91,14 @@ def _cluster_resample_indices(cluster_ids: np.ndarray, rng: np.random.Generator)
     return order[np.repeat(starts[drawn], lengths) + within]
 
 
-def bootstrap_ci(metric: Callable[[np.ndarray, np.ndarray], float], y: np.ndarray, p: np.ndarray,
-                 cluster_ids: np.ndarray, n_boot: int = 1000, seed: int = 0) -> tuple[float, float, float]:
+def bootstrap_ci(
+    metric: Callable[[np.ndarray, np.ndarray], float],
+    y: np.ndarray,
+    p: np.ndarray,
+    cluster_ids: np.ndarray,
+    n_boot: int = 1000,
+    seed: int = 0,
+) -> tuple[float, float, float]:
     """(point estimate, lower, upper) of a 95% percentile bootstrap CI, resampling clusters.
     Resamples where the metric is undefined (NaN, e.g. one class only) are ignored."""
     rng = np.random.default_rng(seed)
@@ -103,9 +110,17 @@ def bootstrap_ci(metric: Callable[[np.ndarray, np.ndarray], float], y: np.ndarra
     return float(metric(y, p)), float(lo), float(hi)
 
 
-def diff_ci(metric: Callable[[np.ndarray, np.ndarray], float], y_a: np.ndarray, p_a: np.ndarray,
-            ids_a: np.ndarray, y_b: np.ndarray, p_b: np.ndarray, ids_b: np.ndarray, n_boot: int = 1000,
-            seed: int = 0) -> tuple[float, float, float]:
+def diff_ci(
+    metric: Callable[[np.ndarray, np.ndarray], float],
+    y_a: np.ndarray,
+    p_a: np.ndarray,
+    ids_a: np.ndarray,
+    y_b: np.ndarray,
+    p_b: np.ndarray,
+    ids_b: np.ndarray,
+    n_boot: int = 1000,
+    seed: int = 0,
+) -> tuple[float, float, float]:
     """metric(a) - metric(b) for two different sets of eyes (e.g. a site against EyePACS test), with a 95%
     CI from independent cluster resamples of the two sets."""
     rng = np.random.default_rng(seed)

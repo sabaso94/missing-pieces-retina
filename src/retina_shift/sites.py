@@ -10,6 +10,7 @@ Every table has the same columns:
     eye        "left" / "right" where known
     age, sex   ODIR only
 """
+
 import io
 import re
 import zipfile
@@ -106,13 +107,17 @@ def eyepacs_rows(labels: pd.DataFrame, members: list[str]) -> pd.DataFrame:
     available = {m.rsplit("/", 1)[-1].rsplit(".", 1)[0]: m for m in members if m.startswith(_EYEPACS_DIR)}
     labels = labels[labels["image"].isin(available)]
     patient_eye = labels["image"].str.rsplit("_", n=1)
-    return _finish(pd.DataFrame({
-        "image_id": labels["image"].to_numpy(),
-        "member": labels["image"].map(available).to_numpy(),
-        "grade": labels["level"].to_numpy(),
-        "patient_id": patient_eye.str[0].to_numpy(),
-        "eye": patient_eye.str[1].to_numpy(),
-    }))
+    return _finish(
+        pd.DataFrame(
+            {
+                "image_id": labels["image"].to_numpy(),
+                "member": labels["image"].map(available).to_numpy(),
+                "grade": labels["level"].to_numpy(),
+                "patient_id": patient_eye.str[0].to_numpy(),
+                "eye": patient_eye.str[1].to_numpy(),
+            }
+        )
+    )
 
 
 def messidor_rows(grades: pd.DataFrame, members: list[str]) -> pd.DataFrame:
@@ -122,11 +127,15 @@ def messidor_rows(grades: pd.DataFrame, members: list[str]) -> pd.DataFrame:
     """
     by_name = {m.rsplit("/", 1)[-1].lower(): m for m in members if not m.endswith(".csv")}
     grades = grades[(grades["adjudicated_gradable"] == 1) & grades["image_id"].str.lower().isin(by_name)]
-    return _finish(pd.DataFrame({
-        "image_id": grades["image_id"].str.rsplit(".", n=1).str[0].to_numpy(),
-        "member": grades["image_id"].str.lower().map(by_name).to_numpy(),
-        "grade": grades["adjudicated_dr_grade"].to_numpy(),
-    }))
+    return _finish(
+        pd.DataFrame(
+            {
+                "image_id": grades["image_id"].str.rsplit(".", n=1).str[0].to_numpy(),
+                "member": grades["image_id"].str.lower().map(by_name).to_numpy(),
+                "grade": grades["adjudicated_dr_grade"].to_numpy(),
+            }
+        )
+    )
 
 
 def idrid_rows(train: pd.DataFrame, test: pd.DataFrame) -> pd.DataFrame:
@@ -135,11 +144,15 @@ def idrid_rows(train: pd.DataFrame, test: pd.DataFrame) -> pd.DataFrame:
     parts = []
     for name, table in [("train", train), ("test", test)]:
         table = table.dropna(subset=["Image name"])
-        parts.append(pd.DataFrame({
-            "image_id": name + "_" + table["Image name"].astype(str),
-            "member": _IDRID_IMAGES[name] + table["Image name"].astype(str) + ".jpg",
-            "grade": table["Retinopathy grade"].to_numpy(),
-        }))
+        parts.append(
+            pd.DataFrame(
+                {
+                    "image_id": name + "_" + table["Image name"].astype(str),
+                    "member": _IDRID_IMAGES[name] + table["Image name"].astype(str) + ".jpg",
+                    "grade": table["Retinopathy grade"].to_numpy(),
+                }
+            )
+        )
     return _finish(pd.concat(parts, ignore_index=True))
 
 
@@ -147,16 +160,20 @@ def odir_rows(table: pd.DataFrame) -> pd.DataFrame:
     """ODIR-5K training set, one row per eye, grade from the eye's diagnostic keywords."""
     parts = []
     for side, eye in [("Left", "left"), ("Right", "right")]:
-        parts.append(pd.DataFrame({
-            "image_id": table[f"{side}-Fundus"].str.rsplit(".", n=1).str[0],
-            "member": _ODIR_IMAGES + table[f"{side}-Fundus"],
-            "grade": table[f"{side}-Diagnostic Keywords"].map(odir_grade),
-            "patient_id": table["ID"].astype(str),
-            "eye": eye,
-            "age": table["Patient Age"],
-            "sex": table["Patient Sex"].str.lower(),
-            "_order": table["ID"] * 2 + (eye == "right"),
-        }))
+        parts.append(
+            pd.DataFrame(
+                {
+                    "image_id": table[f"{side}-Fundus"].str.rsplit(".", n=1).str[0],
+                    "member": _ODIR_IMAGES + table[f"{side}-Fundus"],
+                    "grade": table[f"{side}-Diagnostic Keywords"].map(odir_grade),
+                    "patient_id": table["ID"].astype(str),
+                    "eye": eye,
+                    "age": table["Patient Age"],
+                    "sex": table["Patient Sex"].str.lower(),
+                    "_order": table["ID"] * 2 + (eye == "right"),
+                }
+            )
+        )
     rows = pd.concat(parts).sort_values("_order").dropna(subset=["grade"])
     return _finish(rows)
 
@@ -164,11 +181,16 @@ def odir_rows(table: pd.DataFrame) -> pd.DataFrame:
 def aptos_rows(tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """APTOS 2019 (Aravind Eye Hospital): the competition's 3,662 labelled images, which this Kaggle copy
     splits into train / val / test folders. All three are used: the model never trains on APTOS."""
-    parts = [pd.DataFrame({
-        "image_id": table["id_code"].astype(str),
-        "member": f"{split}_images/{split}_images/" + table["id_code"].astype(str) + ".png",
-        "grade": table["diagnosis"].to_numpy(),
-    }) for split, table in tables.items()]
+    parts = [
+        pd.DataFrame(
+            {
+                "image_id": table["id_code"].astype(str),
+                "member": f"{split}_images/{split}_images/" + table["id_code"].astype(str) + ".png",
+                "grade": table["diagnosis"].to_numpy(),
+            }
+        )
+        for split, table in tables.items()
+    ]
     return _finish(pd.concat(parts, ignore_index=True))
 
 

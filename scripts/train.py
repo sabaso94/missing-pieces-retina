@@ -5,6 +5,7 @@
 One model per seed, saved to checkpoints/seed<k>.pt with its training history. Seeds whose checkpoint
 already exists are skipped, so the five members can be trained in parallel on several GPUs.
 """
+
 import argparse
 
 import torch
@@ -32,12 +33,16 @@ def main() -> None:
     print(f"loaded {len(train)} train and {len(val)} validation images")
     CKPT_DIR.mkdir(exist_ok=True)
     for seed in todo:
-        model, history = train_model(TrainConfig(seed=seed, device=args.device), x_train,
-                                     train["referable"].to_numpy(), x_val, val["referable"].to_numpy())
+        model, history = train_model(
+            TrainConfig(seed=seed, device=args.device),
+            x_train,
+            train["referable"].to_numpy(),
+            x_val,
+            val["referable"].to_numpy(),
+        )
         torch.save(model.state_dict(), CKPT_DIR / f"seed{seed}.pt")
         history.to_csv(CKPT_DIR / f"seed{seed}_history.csv", index=False)
-        print(f"seed {seed}: best validation AUROC {history['val_auroc'].max():.4f} "
-              f"after {len(history)} epochs")
+        print(f"seed {seed}: best validation AUROC {history['val_auroc'].max():.4f} after {len(history)} epochs")
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ For the mixture part, every repetition takes one random eye per patient and spli
 within each sex and age band: one half is the reference, the batch comes from the other, so the test compares
 ODIR with ODIR and only the group mix differs.
 """
+
 import argparse
 
 import pandas as pd
@@ -45,11 +46,13 @@ def main() -> None:
             row.update({metric: point, f"{metric}_lo": lo, f"{metric}_hi": hi})
         rows.append(row)
     pd.DataFrame(rows).to_csv(ROOT / "results" / "e4_groups.csv", index=False)
-    print(pd.DataFrame(rows)[["group", "n", "referable"] + METRICS].round(3).to_string(index=False))
+    print(pd.DataFrame(rows)[["group", "n", "referable", *METRICS]].round(3).to_string(index=False))
 
     reference_band = "age=50-64" if "age=50-64" in groups else None
     comparisons = [("sex=female", "sex=male")]
-    comparisons += [(g, reference_band) for g in groups if g.startswith("age=") and reference_band and g != reference_band]
+    comparisons += [
+        (g, reference_band) for g in groups if g.startswith("age=") and reference_band and g != reference_band
+    ]
     gaps = []
     for group, ref in comparisons:
         for metric in METRICS:
@@ -63,11 +66,15 @@ def main() -> None:
     pca = fit_pca(load_features("eyepacs")[eyepacs.loc[eyepacs["split"] == "train", "pred_row"]])
     strata = (odir["sex"] + "/" + odir["age_band"]).to_numpy()
     mix_groups = {name: mask for name, mask in groups.items() if name != reference_band}
-    mixture = mixture_detection_rates(p, reduce(pca, z), ids, mix_groups, strata, SHARES, SIZES,
-                                      n_reps=args.reps, device=args.device)
+    mixture = mixture_detection_rates(
+        p, reduce(pca, z), ids, mix_groups, strata, SHARES, SIZES, n_reps=args.reps, device=args.device
+    )
     mixture.to_csv(ROOT / "results" / "e4_mixture.csv", index=False)
-    print(mixture.pivot_table(index=["group", "share", "batch_size"], columns="detector",
-                              values="detection_rate").to_string())
+    print(
+        mixture.pivot_table(
+            index=["group", "share", "batch_size"], columns="detector", values="detection_rate"
+        ).to_string()
+    )
 
 
 if __name__ == "__main__":

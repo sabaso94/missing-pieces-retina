@@ -6,6 +6,7 @@ Writes data/cache/<site>/<image_id>.jpg and data/meta/<site>.csv. Images already
 so an interrupted run can be restarted. The archive itself is not modified (download_data.sh deletes it
 after a complete cache).
 """
+
 import argparse
 import io
 import zipfile
@@ -43,8 +44,11 @@ def main() -> None:
     table = site_table(args.site, Path(args.zip_dir))
     out_dir = CACHE_DIR / args.site
     out_dir.mkdir(parents=True, exist_ok=True)
-    jobs = [(m, str(out_dir / f"{i}.jpg")) for m, i in zip(table["member"], table["image_id"])
-            if not (out_dir / f"{i}.jpg").exists()]
+    jobs = [
+        (m, str(out_dir / f"{i}.jpg"))
+        for m, i in zip(table["member"], table["image_id"])
+        if not (out_dir / f"{i}.jpg").exists()
+    ]
     print(f"{args.site}: {len(table)} labelled images, {len(jobs)} to convert")
     with Pool(args.workers, initializer=_open, initargs=(str(Path(args.zip_dir) / table["zip"].iloc[0]),)) as pool:
         for k, _ in enumerate(pool.imap_unordered(_convert, jobs, chunksize=16), 1):

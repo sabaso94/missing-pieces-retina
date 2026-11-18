@@ -6,6 +6,7 @@ Fixes the screening threshold on EyePACS validation (90% sensitivity) and writes
 e1_sites.csv (every metric with CIs), e1_diffs.csv (each site minus EyePACS test), e1_reliability.csv and
 e1_seeds.csv (AUROC of each ensemble member).
 """
+
 import json
 
 import numpy as np
@@ -32,9 +33,18 @@ def main() -> None:
     val = eyepacs[eyepacs["split"] == "val"]
     y_val, p_val, _ = arrays(val)
     t = threshold_for_sensitivity(y_val, p_val, 0.9)
-    THRESHOLD_JSON.write_text(json.dumps({
-        "threshold": t, "target_sensitivity": 0.9, "val_sensitivity": sensitivity(y_val, p_val, t),
-        "val_specificity": specificity(y_val, p_val, t), "val_auroc": auroc(y_val, p_val)}, indent=2))
+    THRESHOLD_JSON.write_text(
+        json.dumps(
+            {
+                "threshold": t,
+                "target_sensitivity": 0.9,
+                "val_sensitivity": sensitivity(y_val, p_val, t),
+                "val_specificity": specificity(y_val, p_val, t),
+                "val_auroc": auroc(y_val, p_val),
+            },
+            indent=2,
+        )
+    )
     print(f"threshold {t:.4f} (validation sensitivity {sensitivity(y_val, p_val, t):.3f})")
 
     frames = {"eyepacs_test": eyepacs[eyepacs["split"] == "test"]}
@@ -55,8 +65,10 @@ def main() -> None:
         p_seeds = np.load(PRED_DIR / f"{site}.npz")["p_seeds"][frame["pred_row"].to_numpy()]
         for seed in range(p_seeds.shape[1]):
             seeds.append({"site": name, "seed": seed, "auroc": auroc(y, p_seeds[:, seed])})
-        print(f"{name}: AUROC {rows[-1]['auroc']:.3f}, sensitivity {rows[-1]['sens']:.3f}, "
-              f"specificity {rows[-1]['spec']:.3f}, ECE {rows[-1]['ece']:.3f}")
+        print(
+            f"{name}: AUROC {rows[-1]['auroc']:.3f}, sensitivity {rows[-1]['sens']:.3f}, "
+            f"specificity {rows[-1]['spec']:.3f}, ECE {rows[-1]['ece']:.3f}"
+        )
 
     pd.DataFrame(rows).to_csv(RESULTS / "e1_sites.csv", index=False)
     pd.DataFrame(diffs).to_csv(RESULTS / "e1_diffs.csv", index=False)

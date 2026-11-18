@@ -68,22 +68,27 @@ def test_split_one_eye_takes_one_eye_per_patient_and_halves_every_stratum():
 def test_split_one_eye_changes_between_repetitions():
     ids, _, _ = _paired_eyes(n_patients=100)
     rng = np.random.default_rng(0)
-    first, second = split_one_eye(ids, np.zeros(len(ids), dtype=str), rng), split_one_eye(ids, np.zeros(len(ids), dtype=str), rng)
+    first, second = (
+        split_one_eye(ids, np.zeros(len(ids), dtype=str), rng),
+        split_one_eye(ids, np.zeros(len(ids), dtype=str), rng),
+    )
     assert set(first[0]) != set(second[0])
 
 
 def test_mixture_null_false_alarms_near_alpha_with_paired_eyes():
     ids, z, p = _paired_eyes()
     in_g = ids % 2 == 0
-    rates = mixture_detection_rates(p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.0], sizes=[200],
-                                    n_reps=100, n_perm=50)
+    rates = mixture_detection_rates(
+        p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.0], sizes=[200], n_reps=100, n_perm=50
+    )
     assert (rates["detection_rate"] <= 0.12).all(), rates
 
 
 def test_mixture_skips_batches_larger_than_the_pool_can_hold():
     ids, z, p = _paired_eyes(n_patients=100)
     in_g = ids < 40  # 40 patients -> 20 of the 50 images in every pool (pi = 0.4)
-    rates = mixture_detection_rates(p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.0, 0.5, 1.0],
-                                    sizes=[20, 40], n_reps=2, n_perm=10)
+    rates = mixture_detection_rates(
+        p, z, ids, {"g": in_g}, in_g.astype(str), shares=[0.0, 0.5, 1.0], sizes=[20, 40], n_reps=2, n_perm=10
+    )
     # share 0.5 needs 0.7 of the batch from the group: 14 of 20 fits, 28 of 40 does not
     assert set(zip(rates["share"], rates["batch_size"])) == {(0.0, 20), (0.0, 40), (0.5, 20), (1.0, 20)}

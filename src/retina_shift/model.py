@@ -1,4 +1,5 @@
 """The classifier: an ImageNet-pretrained ResNet-50 with one output, the logit of referable retinopathy."""
+
 import torch
 from torch import nn
 from torchvision.models import ResNet50_Weights, resnet50

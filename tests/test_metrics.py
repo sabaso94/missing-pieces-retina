@@ -73,7 +73,7 @@ def test_clustered_bootstrap_is_wider_than_unclustered():
 def test_bootstrap_ignores_one_class_resamples():
     y = np.array([1, 0, 0, 0, 0, 0])
     p = np.linspace(0.1, 0.9, 6)
-    point, lo, hi = bootstrap_ci(auroc, y, p, np.arange(6), n_boot=200)
+    _point, lo, hi = bootstrap_ci(auroc, y, p, np.arange(6), n_boot=200)
     assert np.isfinite(lo) and np.isfinite(hi)
 
 
